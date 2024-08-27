@@ -722,6 +722,26 @@ const WalkinPathPage: React.FC = () => {
         console.log('Length of Arc:', length_of_arc);
         console.log('Eucledian Distance:', eucledian_distance_line);
 
+        //calculate the gradient difference
+        //[y2-y1]/[x2-x1]
+        const gradient_of_straight_line =
+          (current.lat - previous.lat) / (current.long - previous.long);
+
+        const gradient_start_of_arc =
+          (circle_arc_3857[1][1] - circle_arc_3857[0][1]) /
+          (circle_arc_3857[1][0] - circle_arc_3857[0][0]);
+
+        const ratio = gradient_of_straight_line / gradient_start_of_arc;
+        if (Math.abs(ratio - 1) < 0.25) {
+          console.log('Ratio:', ratio);
+          return;
+        }
+
+        //if the gradient is substantially different, then draw the line
+        if (Math.abs(gradient_of_straight_line - gradient_start_of_arc) < 0.2) {
+          return;
+        }
+
         //if the difference isn't more than 20%, then don't draw the line
         if ((eucledian_distance_line - length_of_arc) / length_of_arc < 0.2) {
           return;
