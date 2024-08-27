@@ -68,7 +68,11 @@ const WalkinPathPage: React.FC = () => {
 
     try {
       // URL decode the string
+      /* console.log('URL Encoded:', path);
+
       const url_decoded = decodeURIComponent(path);
+
+      console.log('URL Decoded:', url_decoded);
 
       // Decode the base64 string to a binary string
       const binaryString = atob(url_decoded);
@@ -79,7 +83,14 @@ const WalkinPathPage: React.FC = () => {
         uint8Array[i] = binaryString.charCodeAt(i);
       }
 
-      console.log('Uint8Array:', uint8Array);
+      //create a giant string from the uint8Array
+      // the integer spaced by " "
+
+      const numberArray = Array.from(uint8Array);
+      const numberArrayString = numberArray.join(' ');
+
+      console.log('Number Array:', numberArrayString);
+
       // Decode the Uint8Array to a compressed string
       const compressedString = new TextDecoder().decode(uint8Array);
 
@@ -89,8 +100,55 @@ const WalkinPathPage: React.FC = () => {
       // Decompress the string
       const path_string_uncompressed = LZString.decompress(compressedString);
 
+      console.log('I saw this uncompressed string: ');
+      console.log(path_string_uncompressed);
+      */
+
+      //ignore all the previous steps, just get the url and rebuild the string from the hexadecimal
+
+      const hexString = path
+        .split(' ')
+        .map((char) => {
+          return String.fromCharCode(parseInt(char, 16));
+        })
+        .join('');
+
+      console.log('Hex String:', hexString);
+
+      // now, decompress the string
+      const path_string_uncompressed_new = LZString.decompress(hexString);
+
+      console.log('From Hexadecimal Decopress');
+
+      console.log(path_string_uncompressed_new);
+
       // Parse the JSON
-      const path_json = JSON.parse(path_string_uncompressed);
+      const path_json_new = JSON.parse(path_string_uncompressed_new);
+
+      if (!path_json_new) {
+        return;
+      }
+
+      console.log('Path JSON:', path_json_new);
+
+      // Set the trip
+      setTrip({
+        ...trip,
+        name: 'Loaded From URL',
+        paths: path_json_new,
+      });
+
+      //trip ref
+      tripRef.current = {
+        ...tripRef.current,
+        name: 'Loaded From URL',
+        paths: path_json_new,
+      };
+
+      return;
+
+      // Parse the JSON
+      /*const path_json = JSON.parse(path_string_uncompressed);
 
       if (!path_json) {
         return;
@@ -111,6 +169,7 @@ const WalkinPathPage: React.FC = () => {
         name: 'Loaded From URL',
         paths: path_json,
       };
+      */
     } catch (error) {
       console.error('Error decoding path:', error);
     }
@@ -118,24 +177,94 @@ const WalkinPathPage: React.FC = () => {
 
   //see when trip has changed
   useEffect(() => {
-    console.log('Trip has changed', trip);
+    //console.log('Trip has changed', trip);
   }, [trip]);
 
   // compress the path, and save it to the url
   useEffect(() => {
     //don't do this on the first render
 
-    //compress the path
-    console.log('Saving Trip To URL');
-
     // Compress the string
     const path_string_uncompressed = JSON.stringify(tripRef.current.paths);
     const path_string_compressed = LZString.compress(path_string_uncompressed);
+
+    //convert to hexadecimal
+    const hexString = Array.from(path_string_compressed)
+
+      .map((char) => {
+        return char.charCodeAt(0).toString(16);
+      })
+      .join(' ');
+
+    //clean old url
+    //clear the URL and path
+    const pre_url_clear = new URL(window.location.href);
+
+    pre_url_clear.searchParams.delete('path');
+
+    window.history.pushState({}, '', pre_url_clear.toString());
+
+    //save the compressed string to the URL
+    const url_pre = new URL(window.location.href);
+
+    // URL encode the compressed string
+    //no need to URI encode the string
+
+    //const url_encoded = encodeURIComponent(path_string_compressed);
+
+    //push to the URL
+    url_pre.searchParams.set('path', hexString);
+
+    window.history.pushState({}, '', url_pre.toString());
+
+    return;
+
+    //hexadecimal string, now put it in URL
+    //Hexadecimal strings are URL safe I thought?
+    //I don't know, I'm just going to try it
+
+    const idk_lets_see = LZString.decompress(path_string_compressed);
+
+    console.log('I saw this uncompressed string: ');
+    console.log(idk_lets_see);
 
     console.log('I want to see this compressed :');
     console.log(path_string_compressed);
     // Encode the compressed string to a Uint8Array
     const uint8Array = new TextEncoder().encode(path_string_compressed);
+
+    //try to reverse here
+    // Decode the Uint8Array to a string
+    const binaryString = new TextDecoder().decode(uint8Array);
+
+    // then deccompose it
+    const decompressed = LZString.decompress(binaryString);
+
+    console.log('Decompress Tester: ');
+    console.log(decompressed);
+
+    //2nd method
+    const testuint8Array = new Uint8Array(binaryString.length);
+
+    for (let i = 0; i < binaryString.length; i++) {
+      testuint8Array[i] = binaryString.charCodeAt(i);
+    }
+
+    //now you have the uint8Array
+    //now you want to decompress it
+    const string_pre = testuint8Array.buffer;
+
+    const string = new TextDecoder().decode(testuint8Array);
+
+    const decompressed2 = LZString.decompress(string);
+
+    console.log('Decompress Tester 2: ');
+
+    console.log(decompressed2);
+
+    //
+    const uint8ArrayString = Array.from(uint8Array).join(' ');
+    console.log('Uint8Array:', uint8ArrayString);
 
     //turn uint8Array into number array
     const numberArray = Array.from(uint8Array);
@@ -143,9 +272,17 @@ const WalkinPathPage: React.FC = () => {
     // Convert Uint8Array to base64
     const base64Encoded = btoa(String.fromCharCode.apply(null, numberArray));
 
+    console.log('Base64:', base64Encoded);
+
     // URL encode the base64 string
     const url_encoded = encodeURIComponent(base64Encoded);
 
+    //clear the URL and path
+    const url_clear = new URL(window.location.href);
+    url_clear.searchParams.delete('path');
+    window.history.pushState({}, '', url_clear.toString());
+
+    console.log('URL Encoded:', url_encoded);
     // Save it to the URL
     const url = new URL(window.location.href);
     url.searchParams.set('path', url_encoded);
@@ -312,15 +449,24 @@ const WalkinPathPage: React.FC = () => {
         }),
       });
 
+      //create OSM layer
+      //clean it up, because the markings are taking up too much space
+      // and I can't click on points on the top third of the screen
+
+      const OSM_layer = new TileLayer({
+        source: new OSM(),
+      });
+
+      OSM_layer.setZIndex(0);
+      arcLayer.setZIndex(1);
+      vectorLayer.setZIndex(2);
+
+      //get rid of copyright
+      // and the attributions
+
       const map = new OLMap({
         target: mapRef.current,
-        layers: [
-          new TileLayer({
-            source: new OSM(),
-          }),
-          vectorLayer,
-          arcLayer,
-        ],
+        layers: [OSM_layer, vectorLayer, arcLayer],
 
         view: new View({
           center: fromLonLat([0, 0]),
@@ -785,8 +931,7 @@ const WalkinPathPage: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      <h1>Walking Path</h1>
-      <div ref={mapRef} className="w-full h-full flex-grow relative"></div>
+      <div ref={mapRef} className="w-full h-50vh flex-grow relative"></div>
       {modalIndexPanel()}
       <h1>
         {' '}
@@ -809,6 +954,10 @@ const WalkinPathPage: React.FC = () => {
             ...trip,
             paths: [],
           });
+
+          //reset URL
+          const url_clear = new URL(window.location.href);
+          url_clear.searchParams.delete('path');
 
           tripRef.current = {
             ...tripRef.current,
