@@ -46,6 +46,48 @@ const WalkinPathPage: React.FC = () => {
     end_date: '2021-09-10',
   });
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.ctrlKey && event.key === 'z') {
+        // Handle Ctrl + Z
+        setTrip({
+          ...tripRef.current,
+          paths: tripRef.current.paths.slice(0, trip.paths.length - 1),
+        });
+
+        tripRef.current = {
+          ...tripRef.current,
+          paths: tripRef.current.paths.slice(
+            0,
+            tripRef.current.paths.length - 1
+          ),
+        };
+      } else if (event.key === 'Backspace') {
+        // Handle Backspace
+        setTrip({
+          ...tripRef.current,
+          paths: tripRef.current.paths.slice(0, trip.paths.length - 1),
+        });
+
+        tripRef.current = {
+          ...tripRef.current,
+          paths: tripRef.current.paths.slice(
+            0,
+            tripRef.current.paths.length - 1
+          ),
+        };
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Clean up event listener on unmount
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const mapRef = useRef<HTMLDivElement>(null);
   const vectorSourceRef = useRef<VectorSource>(new VectorSource());
   const arcSourceRef = useRef<VectorSource>(new VectorSource());
@@ -180,7 +222,7 @@ const WalkinPathPage: React.FC = () => {
 
   //see when trip has changed
   useEffect(() => {
-    //console.log('Trip has changed', trip);
+    console.log('Trip has changed', trip);
   }, [trip]);
 
   // compress the path, and save it to the url
