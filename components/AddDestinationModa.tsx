@@ -24,23 +24,32 @@ export const AddDestinationModal: React.FC<DestinationModalProps> = ({
   );
 
   useEffect(() => {
-    if (searchTerm === '') {
-      setResultDestinations([]);
-      return;
-    }
+    const searchFunc = () => {
+      if (searchTerm === '') {
+        setResultDestinations([]);
+        return;
+      }
 
-    const search = searchTerm.toLowerCase();
-    const destinations = Destinations.filter(
-      (destination) =>
-        destination.name.toLowerCase().includes(search) ||
-        destination.code_names?.some((code) =>
-          code.toLowerCase().includes(search)
-        )
-    );
+      const search = searchTerm.toLowerCase();
+      const destinations = Destinations.filter(
+        (destination) =>
+          destination.name.toLowerCase().includes(search) ||
+          destination.code_names?.some((code) =>
+            code.toLowerCase().includes(search)
+          )
+      );
 
-    destinations;
-    setResultDestinations(destinations);
-    console.log(destinations);
+      setResultDestinations(destinations);
+    };
+
+    //add debouncing
+    const timeout = setTimeout(() => {
+      searchFunc();
+    }, 500);
+
+    return () => {
+      clearTimeout(timeout);
+    };
   }, [searchTerm]);
 
   if (!show) {
