@@ -457,6 +457,11 @@ const WalkinPathPage: React.FC = () => {
         source: new OSM(),
       });
 
+      //OSM layer is blocking interaction with the map
+      // z-index is 0, still doing it
+
+      //OSM_layer.getAttributions().fill('SOME ATTRIBUTION');
+
       OSM_layer.setZIndex(0);
       arcLayer.setZIndex(1);
       vectorLayer.setZIndex(2);
@@ -497,6 +502,7 @@ const WalkinPathPage: React.FC = () => {
 
       // Click handler to add a new point
       map.on('singleclick', (event) => {
+        console.log('YO I SEE A SINGLE CLICK >>> WOOOT!!!!');
         if (shiftKeyOnly(event)) {
           //find the point feature on the vectorSourceRef that was clicked
 
@@ -744,7 +750,7 @@ const WalkinPathPage: React.FC = () => {
 
         //if the difference isn't more than 20%, then don't draw the line
         if ((eucledian_distance_line - length_of_arc) / length_of_arc < 0.2) {
-          return;
+          //return;
         }
 
         //style the arc line
