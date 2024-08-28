@@ -1,4 +1,7 @@
 'use client';
+
+//import tailwind globals next.js
+import '@/app/globals.css';
 import LZString from 'lz-string';
 import React, { useEffect, useRef, useState } from 'react';
 
