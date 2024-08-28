@@ -27,6 +27,9 @@ import { shiftKeyOnly } from 'ol/events/condition';
 import * as turf from '@turf/turf';
 import { buffer } from 'stream/consumers';
 
+import { Destination } from '@/definitions/Destinations';
+import { AddDestinationModal } from '@/components/AddDestinationModa';
+
 const WalkinPathPage: React.FC = () => {
   const [trip, setTrip] = useState<WalkingTrip>({
     id: 1,
@@ -94,6 +97,9 @@ const WalkinPathPage: React.FC = () => {
   const mapInstanceRef = useRef<OLMap | null>(null);
 
   const [modalIndex, setModalIndex] = useState<number | null>(null);
+
+  const [openDestinationModal, setOpenDestinationModal] =
+    useState<boolean>(false);
 
   //on mount useEffect, un compress the path to the coordinate
   useEffect(() => {
@@ -1032,23 +1038,54 @@ const WalkinPathPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <div ref={mapRef} className="w-full h-50vh flex-grow relative"></div>
+    <div className="h-screen flex flex-wrap flex-col">
+      {
+        <AddDestinationModal
+          handleClose={() => setOpenDestinationModal(false)}
+          handleAdd={(destination) => {
+            //convert lat and long to 3857
+            const coordinates = fromLonLat([destination.long, destination.lat]);
+
+            //add the coordinate to the trip
+            setTrip({
+              ...trip,
+              paths: [
+                ...trip.paths,
+                { lat: coordinates[1], long: coordinates[0] },
+              ],
+            });
+
+            tripRef.current = {
+              ...tripRef.current,
+              paths: [
+                ...tripRef.current.paths,
+                { lat: coordinates[1], long: coordinates[0] },
+              ],
+            };
+            setOpenDestinationModal(false);
+          }}
+          show={openDestinationModal}
+          handleOpen={() => setOpenDestinationModal(true)}
+        />
+      }
+      <div ref={mapRef} className="w-full h-[60vh] relative"></div>
       {modalIndexPanel()}
-      <h1>
-        {' '}
-        Distance is {convertDistanceToPrettyString(calculateDistanceOfPath())}
-      </h1>
-      <h1>
-        {' '}
-        Other Distnace is{' '}
-        {convertDistanceToPrettyString(calculateOpenLayerDistanceOfFeature())}
-      </h1>
-      <h1 className="text-2xl">
-        {' '}
-        Distance (Miles) :{' '}
-        {(calculateOpenLayerDistanceOfFeature() / 1609).toFixed(3)}
-      </h1>
+      <div className="flex flex-col">
+        <h1 className="text-2xl">
+          {' '}
+          Distance (Miles) :{' '}
+          {(calculateOpenLayerDistanceOfFeature() / 1609).toFixed(3)}
+        </h1>
+        <h1>
+          {' '}
+          Distance is {convertDistanceToPrettyString(calculateDistanceOfPath())}
+        </h1>
+        <h1>
+          {' '}
+          Other Distnace is{' '}
+          {convertDistanceToPrettyString(calculateOpenLayerDistanceOfFeature())}
+        </h1>
+      </div>
       <button
         className="bg-blue-500 text-white p-2"
         onClick={() => {
