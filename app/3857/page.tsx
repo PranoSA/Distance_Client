@@ -782,7 +782,37 @@ const WalkinPathPage: React.FC = () => {
           (circle_arc_3857[1][1] - circle_arc_3857[0][1]) /
           (circle_arc_3857[1][0] - circle_arc_3857[0][0]);
 
-        const ratio = gradient_of_straight_line / gradient_start_of_arc;
+        //find the angle between the two gradients
+        //if the angle is more than 10 degrees, then draw the line
+
+        const angle = Math.atan(
+          (gradient_of_straight_line - gradient_start_of_arc) /
+            (1 + gradient_of_straight_line * gradient_start_of_arc)
+        );
+
+        const angle_straight_line = Math.atan(gradient_of_straight_line);
+
+        const angle_start_of_arc = Math.atan(gradient_start_of_arc);
+
+        /* console.log('Angle:', angle);
+
+        //if the angle is more than 20 degrees, then draw the line
+        if (Math.abs(angle) < 0.17) {
+          return;
+        }*/
+
+        const angle_difference = Math.abs(
+          angle_straight_line - angle_start_of_arc
+        );
+
+        console.log('Angle Difference:', angle_difference);
+
+        //if the angle difference is more than 20 degrees, then draw the line
+        if (angle_difference < 0.17) {
+          return;
+        }
+
+        /*const ratio = gradient_of_straight_line / gradient_start_of_arc;
         if (Math.abs(ratio - 1) < 0.25) {
           console.log('Ratio:', ratio);
           return;
@@ -797,6 +827,7 @@ const WalkinPathPage: React.FC = () => {
         if ((eucledian_distance_line - length_of_arc) / length_of_arc < 0.2) {
           //return;
         }
+          */
 
         //style the arc line
         const new_arc_feature = new Feature(lineString_3857);
