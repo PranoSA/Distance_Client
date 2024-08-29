@@ -796,7 +796,19 @@ const WalkinPathPage: React.FC = () => {
         // if it is , draw both
 
         if (circle_arc_3857.length === 2) {
-          const coord_part_1 = circle_arc_3857[0].slice(2);
+          const coord_part_1 = circle_arc_3857[0].filter((coord, i) => {
+            //if either [0] or [1] is NaN, then remove
+
+            //@ts-ignore
+            if (isNaN(coord[0])) {
+              return false;
+            }
+            //@ts-ignore
+            if (isNaN(coord[1])) {
+              return false;
+            }
+            return true;
+          });
 
           //trimp out any long or
 
@@ -806,7 +818,18 @@ const WalkinPathPage: React.FC = () => {
             fromLonLat(coord)
           );
 
-          const coord_part_2 = circle_arc_3857[1].slice(2);
+          const coord_part_2 = circle_arc_3857[1].filter((coord, i) => {
+            //if either [0] or [1] is NaN, then remove
+            //@ts-ignore
+            if (isNaN(coord[0])) {
+              return false;
+            }
+            //@ts-ignore
+            if (isNaN(coord[1])) {
+              return false;
+            }
+            return true;
+          });
 
           //convert to 3857
           const coord_part_2_3857 = coord_part_2.map((coord) =>
