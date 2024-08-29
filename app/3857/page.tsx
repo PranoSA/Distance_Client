@@ -540,6 +540,8 @@ const WalkinPathPage: React.FC = () => {
 
       const OSM_layer = new TileLayer({
         source: new OSM(),
+        //@ts-ignore
+        wrapX: false,
       });
 
       //OSM layer is blocking interaction with the map
@@ -557,10 +559,10 @@ const WalkinPathPage: React.FC = () => {
       const map = new OLMap({
         target: mapRef.current,
         layers: [OSM_layer, vectorLayer, arcLayer],
-
         view: new View({
           center: fromLonLat([0, 0]),
           zoom: 2,
+          multiWorld: false,
         }),
       });
 
@@ -959,54 +961,6 @@ const WalkinPathPage: React.FC = () => {
 
         console.log('Angle Difference:', angle_difference);
 
-        //get length of the straight line
-        const length_line = getLength(lineString, {
-          projection: 'EPSG:3857',
-        });
-
-        // set too_long to true if over the half the circumrfence of the earth
-        // take circumfrence at latitude 1, then latitude 2,
-        // then average, and divide 2
-
-        const cirumfrenceAtLat3857 = (lat_meters: number) => {
-          // convert to 4326
-
-          const radiusEarth = 6371000;
-          const lat = toLonLat([0, lat_meters]);
-
-          // convert to radians
-          const lat_rad = (lat[1] * Math.PI) / 180;
-
-          //return
-          return 2 * Math.PI * radiusEarth * Math.cos(lat_rad);
-        };
-
-        const cirumfrence_average_between_ends =
-          (cirumfrenceAtLat3857(previous.lat) +
-            cirumfrenceAtLat3857(current.lat)) /
-          2;
-
-        const naive_eucledian_distance = Math.sqrt(
-          Math.pow(current.lat - previous.lat, 2) +
-            Math.pow(current.long - previous.long, 2)
-        );
-
-        /*const ratio = gradient_of_straight_line / gradient_start_of_arc;
-        if (Math.abs(ratio - 1) < 0.25) {
-          console.log('Ratio:', ratio);
-          return;
-        }
-
-        //if the gradient is substantially different, then draw the line
-        if (Math.abs(gradient_of_straight_line - gradient_start_of_arc) < 0.2) {
-          return;
-        }
-
-        //if the difference isn't more than 20%, then don't draw the line
-        if ((eucledian_distance_line - length_of_arc) / length_of_arc < 0.2) {
-          //return;
-        }
-          */
         //const lineString_3857 = new LineString(circle_arc_3857);
         //style the arc line
         const new_arc_feature = new Feature(lineString_3857);
@@ -1058,17 +1012,6 @@ const WalkinPathPage: React.FC = () => {
 
           //if there  is a split, there shold also be a split with the line
 
-          //which means , test that the first part of the line is opposite sign longi
-          //as the last part
-          const sign_1 = tripRef.current.paths[index - 1].long < 0;
-          const sign_2 = tripRef.current.paths[index].long < 0;
-
-          if (sign_1 === sign_2) {
-            console.log(
-              'WHOOPSY DAYS!! THEY ARE BOTH ' + sign_1 + ' AND ' + sign_2
-            );
-          }
-
           //do another check for angle difference
           const gradient_start_of_arc_1 =
             (coord_part_1_3857[1][1] - coord_part_1_3857[0][1]) /
@@ -1079,7 +1022,9 @@ const WalkinPathPage: React.FC = () => {
               Math.atan(gradient_start_of_arc_1)
           );
 
-          if (new_angle_difference < 0.17 && !too_long) {
+          console.log('New angle difference:', new_angle_difference);
+          if (new_angle_difference < 0.17) {
+            console.log('');
             return;
           }
 
@@ -1109,18 +1054,10 @@ const WalkinPathPage: React.FC = () => {
           arcSourceRef.current.addFeature(arc_feature_2);
 
           return;
-        } else {
-          // if arc is not split, then line should be same sign
+        }
 
-          //if on onoposite side of the -20037508.34,
-          const sign_1 = tripRef.current.paths[index - 1].long < 0;
-          const sign_2 = tripRef.current.paths[index].long < 0;
-
-          if (sign_1 !== sign_2) {
-            console.log(
-              'WHOOPSY DAYS!! THEY ARE BOTH ' + sign_1 + ' AND ' + sign_2
-            );
-          }
+        if (angle_difference < 0.17) {
+          return;
         }
 
         //style the arc line lightyellow
