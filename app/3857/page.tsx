@@ -20,7 +20,7 @@ import Modify, { ModifyEvent } from 'ol/interaction/Modify';
 import Draw from 'ol/interaction/Draw';
 
 import { getDistance } from 'ol/sphere';
-import { distance } from 'ol/coordinate';
+import { Coordinate, distance } from 'ol/coordinate';
 import { getLength } from 'ol/sphere';
 import { shiftKeyOnly } from 'ol/events/condition';
 
@@ -29,6 +29,13 @@ import { buffer } from 'stream/consumers';
 
 import { Destination } from '@/definitions/Destinations';
 import { AddDestinationModal } from '@/components/AddDestinationModa';
+
+import {
+  update_url_based_on_path_string,
+  retrieve_path_from_url,
+} from '@/components/app/Utils_Url';
+
+import { normalizeCoordinate } from '@/components/app/Coordinates_Utils';
 
 const WalkinPathPage: React.FC = () => {
   const [trip, setTrip] = useState<WalkingTrip>({
@@ -49,22 +56,62 @@ const WalkinPathPage: React.FC = () => {
     end_date: '2021-09-10',
   });
 
+  type EditAction = {
+    type: 'add' | 'remove' | 'edit';
+    index: number; //only applicable to edit (for now) and later remove
+    coordinate: Coordinate;
+  };
+
+  const editHistory = useRef<EditAction[]>([]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.ctrlKey && event.key === 'z') {
-        // Handle Ctrl + Z
-        setTrip({
-          ...tripRef.current,
-          paths: tripRef.current.paths.slice(0, trip.paths.length - 1),
-        });
+        const last_action = editHistory.current.pop();
 
-        tripRef.current = {
-          ...tripRef.current,
-          paths: tripRef.current.paths.slice(
-            0,
-            tripRef.current.paths.length - 1
-          ),
-        };
+        if (!last_action) return;
+
+        if (last_action.type === 'add') {
+          setTrip({
+            ...tripRef.current,
+            paths: tripRef.current.paths.slice(
+              0,
+              tripRef.current.paths.length - 1
+            ),
+          });
+
+          tripRef.current = {
+            ...tripRef.current,
+            paths: tripRef.current.paths.slice(
+              0,
+              tripRef.current.paths.length - 1
+            ),
+          };
+        }
+
+        if (last_action.type === 'edit') {
+          //get the coordinate
+          const coordinate = last_action.coordinate;
+
+          //get the index
+          const index = last_action.index;
+
+          //replace the newer coordinate with the stored old coordinate in histroy
+          const old_coordinate = last_action.coordinate;
+
+          const new_trip: WalkingTrip = {
+            ...tripRef.current,
+            paths: [
+              ...tripRef.current.paths.slice(0, index),
+              { lat: old_coordinate[1], long: old_coordinate[0] },
+              ...tripRef.current.paths.slice(index + 1),
+            ],
+          };
+
+          setTrip(new_trip);
+
+          tripRef.current = new_trip;
+        }
       } else if (event.key === 'Backspace') {
         // Handle Backspace
         setTrip({
@@ -103,241 +150,30 @@ const WalkinPathPage: React.FC = () => {
 
   //on mount useEffect, un compress the path to the coordinate
   useEffect(() => {
-    // get the URL parameter path
-    const url = new URL(window.location.href);
+    //get the path from the URL
+    const path_json_new = retrieve_path_from_url();
 
-    console.log('Building Trip From URL');
+    // Set the trip
+    setTrip({
+      ...trip,
+      name: 'Loaded From URL',
+      paths: path_json_new,
+    });
 
-    // get the path parameter
-    const path = url.searchParams.get('path');
+    //trip ref
+    tripRef.current = {
+      ...tripRef.current,
+      name: 'Loaded From URL',
+      paths: path_json_new,
+    };
 
-    console.log('Path:', path);
-
-    if (!path) return;
-
-    if (path === '') return;
-
-    try {
-      // URL decode the string
-      /* console.log('URL Encoded:', path);
-
-      const url_decoded = decodeURIComponent(path);
-
-      console.log('URL Decoded:', url_decoded);
-
-      // Decode the base64 string to a binary string
-      const binaryString = atob(url_decoded);
-
-      // Convert binary string to Uint8Array
-      const uint8Array = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-      }
-
-      //create a giant string from the uint8Array
-      // the integer spaced by " "
-
-      const numberArray = Array.from(uint8Array);
-      const numberArrayString = numberArray.join(' ');
-
-      console.log('Number Array:', numberArrayString);
-
-      // Decode the Uint8Array to a compressed string
-      const compressedString = new TextDecoder().decode(uint8Array);
-
-      console.log('I saw this compressed string: ');
-      console.log(compressedString);
-
-      // Decompress the string
-      const path_string_uncompressed = LZString.decompress(compressedString);
-
-      console.log('I saw this uncompressed string: ');
-      console.log(path_string_uncompressed);
-      */
-
-      //ignore all the previous steps, just get the url and rebuild the string from the hexadecimal
-
-      const hexString = path
-        .split(' ')
-        .map((char) => {
-          return String.fromCharCode(parseInt(char, 16));
-        })
-        .join('');
-
-      console.log('Hex String:', hexString);
-
-      // now, decompress the string
-      const path_string_uncompressed_new = LZString.decompress(hexString);
-
-      console.log('From Hexadecimal Decopress');
-
-      console.log(path_string_uncompressed_new);
-
-      // Parse the JSON
-      const path_json_new = JSON.parse(path_string_uncompressed_new);
-
-      if (!path_json_new) {
-        return;
-      }
-
-      console.log('Path JSON:', path_json_new);
-
-      // Set the trip
-      setTrip({
-        ...trip,
-        name: 'Loaded From URL',
-        paths: path_json_new,
-      });
-
-      //trip ref
-      tripRef.current = {
-        ...tripRef.current,
-        name: 'Loaded From URL',
-        paths: path_json_new,
-      };
-
-      return;
-
-      // Parse the JSON
-      /*const path_json = JSON.parse(path_string_uncompressed);
-
-      if (!path_json) {
-        return;
-      }
-
-      console.log('Path JSON:', path_json);
-
-      // Set the trip
-      setTrip({
-        ...trip,
-        name: 'Loaded From URL',
-        paths: path_json,
-      });
-
-      //trip ref
-      tripRef.current = {
-        ...tripRef.current,
-        name: 'Loaded From URL',
-        paths: path_json,
-      };
-      */
-    } catch (error) {
-      console.error('Error decoding path:', error);
-    }
+    return;
   }, []);
-
-  //see when trip has changed
-  useEffect(() => {
-    console.log('Trip has changed', trip);
-  }, [trip]);
 
   // compress the path, and save it to the url
   useEffect(() => {
-    //don't do this on the first render
-
-    // Compress the string
-    const path_string_uncompressed = JSON.stringify(tripRef.current.paths);
-    const path_string_compressed = LZString.compress(path_string_uncompressed);
-
-    //convert to hexadecimal
-    const hexString = Array.from(path_string_compressed)
-
-      .map((char) => {
-        return char.charCodeAt(0).toString(16);
-      })
-      .join(' ');
-
-    //clean old url
-    //clear the URL and path
-    const pre_url_clear = new URL(window.location.href);
-
-    pre_url_clear.searchParams.delete('path');
-
-    window.history.pushState({}, '', pre_url_clear.toString());
-
-    //save the compressed string to the URL
-    const url_pre = new URL(window.location.href);
-
-    // URL encode the compressed string
-    //no need to URI encode the string
-
-    //const url_encoded = encodeURIComponent(path_string_compressed);
-
-    //push to the URL
-    url_pre.searchParams.set('path', hexString);
-
-    window.history.pushState({}, '', url_pre.toString());
-
-    return;
-
-    //hexadecimal string, now put it in URL
-    //Hexadecimal strings are URL safe I thought?
-    //I don't know, I'm just going to try it
-
-    const idk_lets_see = LZString.decompress(path_string_compressed);
-
-    console.log('I saw this uncompressed string: ');
-    console.log(idk_lets_see);
-
-    console.log('I want to see this compressed :');
-    console.log(path_string_compressed);
-    // Encode the compressed string to a Uint8Array
-    const uint8Array = new TextEncoder().encode(path_string_compressed);
-
-    //try to reverse here
-    // Decode the Uint8Array to a string
-    const binaryString = new TextDecoder().decode(uint8Array);
-
-    // then deccompose it
-    const decompressed = LZString.decompress(binaryString);
-
-    console.log('Decompress Tester: ');
-    console.log(decompressed);
-
-    //2nd method
-    const testuint8Array = new Uint8Array(binaryString.length);
-
-    for (let i = 0; i < binaryString.length; i++) {
-      testuint8Array[i] = binaryString.charCodeAt(i);
-    }
-
-    //now you have the uint8Array
-    //now you want to decompress it
-    const string_pre = testuint8Array.buffer;
-
-    const string = new TextDecoder().decode(testuint8Array);
-
-    const decompressed2 = LZString.decompress(string);
-
-    console.log('Decompress Tester 2: ');
-
-    console.log(decompressed2);
-
-    //
-    const uint8ArrayString = Array.from(uint8Array).join(' ');
-    console.log('Uint8Array:', uint8ArrayString);
-
-    //turn uint8Array into number array
-    const numberArray = Array.from(uint8Array);
-
-    // Convert Uint8Array to base64
-    const base64Encoded = btoa(String.fromCharCode.apply(null, numberArray));
-
-    console.log('Base64:', base64Encoded);
-
-    // URL encode the base64 string
-    const url_encoded = encodeURIComponent(base64Encoded);
-
-    //clear the URL and path
-    const url_clear = new URL(window.location.href);
-    url_clear.searchParams.delete('path');
-    window.history.pushState({}, '', url_clear.toString());
-
-    console.log('URL Encoded:', url_encoded);
-    // Save it to the URL
-    const url = new URL(window.location.href);
-    url.searchParams.set('path', url_encoded);
-    window.history.pushState({}, '', url.toString());
+    update_url_based_on_path_string(trip);
+    console.log('Trip has changed', trip);
   }, [trip]);
 
   //append a coordinate to the path
@@ -351,11 +187,15 @@ const WalkinPathPage: React.FC = () => {
 
       tripRef.current = new_trip;
 
-      console.log('Trip ahs been updated', new_trip);
-
       setTrip(new_trip);
 
       tripRef.current = new_trip;
+      //append to history
+      editHistory.current.push({
+        type: 'add',
+        index: tripRef.current.paths.length - 1,
+        coordinate: [long, lat],
+      });
     }
   };
 
@@ -382,6 +222,11 @@ const WalkinPathPage: React.FC = () => {
     });
 
     const changed_coordinate = {
+      lat: 0,
+      long: 0,
+    };
+
+    const old_coordinate = {
       lat: 0,
       long: 0,
     };
@@ -424,17 +269,8 @@ const WalkinPathPage: React.FC = () => {
       if (existingCoordinate) {
         return;
       }
-
-      /*if (
-        old_coordinate.lat === coordinates[1] &&
-        old_coordinate.long === coordinates[0]
-      ) {
-        return;
-      }*/
       changed_coordinate.lat = coordinates[1];
       changed_coordinate.long = coordinates[0];
-      //old_paths[i] = { lat: coordinates[1], long: coordinates[0] };
-      //return { lat: coordinates[1], long: coordinates[0] };
     });
 
     //place changed_coordinate into the old_paths at the unfound index
@@ -444,7 +280,20 @@ const WalkinPathPage: React.FC = () => {
     });
 
     if (unfound_index !== -1) {
+      const old_coordinate = old_paths[unfound_index];
+
       old_paths[unfound_index] = changed_coordinate;
+
+      //make a copy of the old long and lat
+      const old_long = old_coordinate.long;
+      const old_lat = old_coordinate.lat;
+
+      //update history with old coordinate
+      editHistory.current.push({
+        type: 'edit',
+        index: unfound_index,
+        coordinate: [old_long, old_lat],
+      });
     }
 
     setTrip({
