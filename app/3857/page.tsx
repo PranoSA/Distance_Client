@@ -57,9 +57,9 @@ const WalkinPathPage: React.FC = () => {
   });
 
   type EditAction = {
-    type: 'add' | 'remove' | 'edit';
+    type: 'add' | 'remove' | 'edit' | 'clear';
     index: number; //only applicable to edit (for now) and later remove
-    coordinate: Coordinate;
+    coordinate: Coordinate[]; //only applicable to reset
   };
 
   const editHistory = useRef<EditAction[]>([]);
@@ -89,7 +89,7 @@ const WalkinPathPage: React.FC = () => {
           };
         }
 
-        if (last_action.type === 'edit') {
+        if (last_action.type === 'clear') {
           //get the coordinate
           const coordinate = last_action.coordinate;
 
@@ -98,6 +98,28 @@ const WalkinPathPage: React.FC = () => {
 
           //replace the newer coordinate with the stored old coordinate in histroy
           const old_coordinate = last_action.coordinate;
+
+          const new_trip: WalkingTrip = {
+            ...tripRef.current,
+            paths: old_coordinate.map((coord) => {
+              return { lat: coord[1], long: coord[0] };
+            }),
+          };
+
+          setTrip(new_trip);
+
+          tripRef.current = new_trip;
+        }
+
+        if (last_action.type === 'edit') {
+          //get the coordinate
+          const coordinate = last_action.coordinate;
+
+          //get the index
+          const index = last_action.index;
+
+          //replace the newer coordinate with the stored old coordinate in histroy
+          const old_coordinate = last_action.coordinate[0];
 
           const new_trip: WalkingTrip = {
             ...tripRef.current,
@@ -194,7 +216,7 @@ const WalkinPathPage: React.FC = () => {
       editHistory.current.push({
         type: 'add',
         index: tripRef.current.paths.length - 1,
-        coordinate: [long, lat],
+        coordinate: [[long, lat]],
       });
     }
   };
@@ -292,7 +314,7 @@ const WalkinPathPage: React.FC = () => {
       editHistory.current.push({
         type: 'edit',
         index: unfound_index,
-        coordinate: [old_long, old_lat],
+        coordinate: [[old_long, old_lat]],
       });
     }
 
@@ -911,6 +933,12 @@ const WalkinPathPage: React.FC = () => {
                 { lat: coordinates[1], long: coordinates[0] },
               ],
             };
+            //push history
+            editHistory.current.push({
+              type: 'add',
+              index: tripRef.current.paths.length - 1,
+              coordinate: [[destination.long, destination.lat]],
+            });
             setOpenDestinationModal(false);
           }}
           show={openDestinationModal}
@@ -946,6 +974,15 @@ const WalkinPathPage: React.FC = () => {
           //reset URL
           const url_clear = new URL(window.location.href);
           url_clear.searchParams.delete('path');
+
+          //push history
+          editHistory.current.push({
+            type: 'clear',
+            index: 0,
+            coordinate: trip.paths.map((path) => {
+              return [path.long, path.lat];
+            }),
+          });
 
           tripRef.current = {
             ...tripRef.current,
