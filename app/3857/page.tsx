@@ -175,6 +175,15 @@ const WalkinPathPage: React.FC = () => {
     //get the path from the URL
     const path_json_new = retrieve_path_from_url();
 
+    //set history
+    path_json_new.forEach((path) => {
+      editHistory.current.push({
+        type: 'add',
+        index: tripRef.current.paths.length - 1,
+        coordinate: [[path.long, path.lat]],
+      });
+    });
+
     // Set the trip
     setTrip({
       ...trip,
