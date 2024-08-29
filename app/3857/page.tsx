@@ -170,6 +170,41 @@ const WalkinPathPage: React.FC = () => {
   const [openDestinationModal, setOpenDestinationModal] =
     useState<boolean>(false);
 
+  type WhatToDo = 'subtract' | 'none' | 'add';
+
+  const findOutWhatToDoFromPoints = (
+    lat1: number,
+    long1: number,
+    lat2: number,
+    long2: number
+  ): WhatToDo => {
+    //
+    const eucledianDistanceNone = Math.sqrt(
+      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1, 2)
+    );
+
+    const eucledianDistanceAdd = Math.sqrt(
+      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1 + 20037508.34 * 2, 2)
+    );
+
+    const eucledianDistanceSub = Math.sqrt(
+      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1 - 20037508.34 * 2, 2)
+    );
+
+    //panic if eucledianDistanceNone is less than both eucledianDistanceAdd and eucledianDistanceSub
+    if (eucledianDistanceNone < eucledianDistanceAdd) {
+      if (eucledianDistanceNone < eucledianDistanceSub) {
+        return 'none';
+      }
+    }
+
+    if (eucledianDistanceAdd < eucledianDistanceSub) {
+      return 'add';
+    }
+
+    return 'subtract';
+  };
+
   //on mount useEffect, un compress the path to the coordinate
   useEffect(() => {
     //get the path from the URL
@@ -210,6 +245,55 @@ const WalkinPathPage: React.FC = () => {
   //append a coordinate to the path
   const appendCoordinate = (lat: number, long: number) => {
     if (trip) {
+      if (tripRef.current.paths.length > 0) {
+        const naive_eucledian_distance = Math.sqrt(
+          Math.pow(
+            lat - tripRef.current.paths[tripRef.current.paths.length - 1].lat,
+            2
+          ) +
+            Math.pow(
+              long -
+                tripRef.current.paths[tripRef.current.paths.length - 1].long,
+              2
+            )
+        );
+
+        const circumfrence_earth = 40075000;
+
+        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
+
+        //
+
+        const what_to_do = findOutWhatToDoFromPoints(
+          tripRef.current.paths[tripRef.current.paths.length - 1].lat,
+          tripRef.current.paths[tripRef.current.paths.length - 1].long,
+          lat,
+          long
+        );
+
+        console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
+
+        if (what_to_do === 'subtract') {
+          long -= 20037508.34 * 2;
+        }
+
+        if (what_to_do === 'add') {
+          long += 20037508.34 * 2;
+        }
+
+        /*if (too_long) {
+          //if ahead of the previous point, then subtract
+          //if behind the previous point, then add
+          if (
+            long > tripRef.current.paths[tripRef.current.paths.length - 1].long
+          ) {
+            long -= 20037508.34 * 2;
+          } else {
+            long += 20037508.34 * 2;
+          }
+        }*/
+      }
+
       const new_trip = {
         ...tripRef.current,
         name: 'Trip Been Updated',
@@ -329,10 +413,61 @@ const WalkinPathPage: React.FC = () => {
       return !found;
     });
 
+    if (unfound_index > 0) {
+      //test for too long
+      const naive_eucledian_distance = Math.sqrt(
+        Math.pow(changed_coordinate.lat - old_paths[unfound_index - 1].lat, 2) +
+          Math.pow(
+            changed_coordinate.long - old_paths[unfound_index - 1].long,
+            2
+          )
+      );
+      const circumfrence_earth = 40075000;
+
+      const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
+
+      if (too_long) {
+        if (changed_coordinate.long > old_paths[unfound_index - 1].long) {
+          changed_coordinate.long -= 20037508.34 * 2;
+        } else {
+          changed_coordinate.long += 20037508.34 * 2;
+        }
+      }
+    }
+
     if (unfound_index !== -1) {
       const old_coordinate = old_paths[unfound_index];
 
       old_paths[unfound_index] = changed_coordinate;
+
+      //now you need to check if too long for all after the index
+      for (let i = unfound_index + 1; i < old_paths.length; i++) {
+        const next_coordinate = old_paths[i];
+
+        const naive_eucledian_distance = Math.sqrt(
+          Math.pow(changed_coordinate.lat - next_coordinate.lat, 2) +
+            Math.pow(changed_coordinate.long - next_coordinate.long, 2)
+        );
+
+        const circumfrence_earth = 40075000;
+
+        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
+
+        if (too_long) {
+          if (old_paths[i].long > old_paths[i - 1].long) {
+            old_paths[i].long -= 20037508.34 * 2;
+          } else {
+            old_paths[i].long += 20037508.34 * 2;
+          }
+        }
+
+        //update history with old coordinate
+        /*editHistory.current.push({
+            type: 'edit',
+            index: i,
+            coordinate: [[next_coordinate.long, next_coordinate.lat]],
+          });*/
+      }
 
       //make a copy of the old long and lat
       const old_long = old_coordinate.long;
@@ -485,10 +620,28 @@ const WalkinPathPage: React.FC = () => {
           const coordinates = point?.getCoordinates();
 
           //find the index of the point in the trip.paths
-          const index = tripRef.current.paths.findIndex(
+          let index = tripRef.current.paths.findIndex(
             (path) =>
               path.lat === coordinates[1] && path.long === coordinates[0]
           );
+
+          //now try offset by 2*20037508.34
+          if (index === -1) {
+            let index = tripRef.current.paths.findIndex(
+              (path) =>
+                path.lat === coordinates[1] &&
+                path.long + 20037508.34 === coordinates[0]
+            );
+          }
+
+          //now try offset by -2*20037508.34
+          if (index === -1) {
+            let index = tripRef.current.paths.findIndex(
+              (path) =>
+                path.lat === coordinates[1] &&
+                path.long - 20037508.34 === coordinates[0]
+            );
+          }
 
           if (index === -1) {
             setModalIndex(null);
@@ -631,6 +784,86 @@ const WalkinPathPage: React.FC = () => {
         const previous = trip.paths[index - 1];
         const current = trip.paths[index];
 
+        const eucledian_distance_line = Math.sqrt(
+          Math.pow(current.lat - previous.lat, 2) +
+            Math.pow(current.long - previous.long, 2)
+        );
+
+        const circumfrence_earth = 40075000;
+        //const too_long = length_line > cirumfrence_average_between_ends / 2;
+        const too_long = eucledian_distance_line * 2 > circumfrence_earth;
+
+        //if too lng, subtract 20037508.34*2 from the longitudes
+        // and then draw the line
+
+        // if its ahead of the previous point, then subtract
+        // if its behind the previous point, then add
+
+        const what_to_do = findOutWhatToDoFromPoints(
+          previous.lat,
+          previous.long,
+          current.lat,
+          current.long
+        );
+
+        console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
+
+        if (what_to_do === 'subtract') {
+          current.long -= 20037508.34 * 2;
+        }
+
+        if (what_to_do === 'add') {
+          current.long += 20037508.34 * 2;
+        }
+
+        if (what_to_do !== 'none') {
+          tripRef.current = {
+            ...tripRef.current,
+            paths: [
+              ...tripRef.current.paths.slice(0, index),
+              { lat: current.lat, long: current.long },
+              ...tripRef.current.paths.slice(index + 1),
+            ],
+          };
+
+          setTrip({
+            ...trip,
+            paths: [
+              ...trip.paths.slice(0, index),
+              { lat: current.lat, long: current.long },
+              ...trip.paths.slice(index + 1),
+            ],
+          });
+        }
+
+        if (too_long) {
+          //break out of if
+          /*  if (current.long > previous.long) {
+            current.long -= 20037508.34 * 2;
+          } else {
+            current.long += 20037508.34 * 2;
+          }*/
+          /*
+                  setTrip({
+                    ...trip,
+                    paths: [
+                      ...trip.paths.slice(0, index),
+                      { lat: current.lat, long: current.long },
+                      ...trip.paths.slice(index + 1),
+                    ],
+                  });
+        
+                  tripRef.current = {
+                    ...tripRef.current,
+                    paths: [
+                      ...tripRef.current.paths.slice(0, index),
+                      { lat: current.lat, long: current.long },
+                      ...tripRef.current.paths.slice(index + 1),
+                    ],
+                  };
+                  */
+        }
+
         const lineString = new LineString([
           [previous.long, previous.lat],
           [current.long, current.lat],
@@ -665,11 +898,6 @@ const WalkinPathPage: React.FC = () => {
         const length_of_arc = turf.length(circle_arc, {
           units: 'meters',
         });
-
-        const eucledian_distance_line = Math.sqrt(
-          Math.pow(current.lat - previous.lat, 2) +
-            Math.pow(current.long - previous.long, 2)
-        );
 
         const lineFeature = new Feature(lineString);
 
@@ -739,7 +967,6 @@ const WalkinPathPage: React.FC = () => {
         // set too_long to true if over the half the circumrfence of the earth
         // take circumfrence at latitude 1, then latitude 2,
         // then average, and divide 2
-        const circumfrence_earth = 40075000;
 
         const cirumfrenceAtLat3857 = (lat_meters: number) => {
           // convert to 4326
@@ -763,14 +990,6 @@ const WalkinPathPage: React.FC = () => {
           Math.pow(current.lat - previous.lat, 2) +
             Math.pow(current.long - previous.long, 2)
         );
-
-        //const too_long = length_line > cirumfrence_average_between_ends / 2;
-        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
-
-        //if the angle difference is more than 20 degrees, then draw the line
-        if (angle_difference < 0.17 && !too_long) {
-          return;
-        }
 
         /*const ratio = gradient_of_straight_line / gradient_start_of_arc;
         if (Math.abs(ratio - 1) < 0.25) {
@@ -837,6 +1056,19 @@ const WalkinPathPage: React.FC = () => {
             fromLonLat(coord)
           );
 
+          //if there  is a split, there shold also be a split with the line
+
+          //which means , test that the first part of the line is opposite sign longi
+          //as the last part
+          const sign_1 = tripRef.current.paths[index - 1].long < 0;
+          const sign_2 = tripRef.current.paths[index].long < 0;
+
+          if (sign_1 === sign_2) {
+            console.log(
+              'WHOOPSY DAYS!! THEY ARE BOTH ' + sign_1 + ' AND ' + sign_2
+            );
+          }
+
           //do another check for angle difference
           const gradient_start_of_arc_1 =
             (coord_part_1_3857[1][1] - coord_part_1_3857[0][1]) /
@@ -847,7 +1079,7 @@ const WalkinPathPage: React.FC = () => {
               Math.atan(gradient_start_of_arc_1)
           );
 
-          if (new_angle_difference < 0.17) {
+          if (new_angle_difference < 0.17 && !too_long) {
             return;
           }
 
@@ -877,6 +1109,18 @@ const WalkinPathPage: React.FC = () => {
           arcSourceRef.current.addFeature(arc_feature_2);
 
           return;
+        } else {
+          // if arc is not split, then line should be same sign
+
+          //if on onoposite side of the -20037508.34,
+          const sign_1 = tripRef.current.paths[index - 1].long < 0;
+          const sign_2 = tripRef.current.paths[index].long < 0;
+
+          if (sign_1 !== sign_2) {
+            console.log(
+              'WHOOPSY DAYS!! THEY ARE BOTH ' + sign_1 + ' AND ' + sign_2
+            );
+          }
         }
 
         //style the arc line lightyellow
@@ -1084,6 +1328,48 @@ const WalkinPathPage: React.FC = () => {
         <AddDestinationModal
           handleClose={() => setOpenDestinationModal(false)}
           handleAdd={(destination) => {
+            const naive_eucledian_distance = Math.sqrt(
+              Math.pow(
+                destination.lat -
+                  tripRef.current.paths[tripRef.current.paths.length - 1].lat,
+                2
+              ) +
+                Math.pow(
+                  destination.long -
+                    tripRef.current.paths[tripRef.current.paths.length - 1]
+                      .long,
+                  2
+                )
+            );
+
+            const circumfrence_earth = 40075000;
+
+            const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
+
+            /*if (too_long) {
+              if (destination.long > 0) {
+                destination.long -= 20037508.34 * 2;
+              } else {
+                destination.long += 20037508.34 * 2;
+              }
+            }*/
+            const what_to_do = findOutWhatToDoFromPoints(
+              tripRef.current.paths[tripRef.current.paths.length - 1].lat,
+              tripRef.current.paths[tripRef.current.paths.length - 1].long,
+              destination.lat,
+              destination.long
+            );
+
+            console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
+
+            if (what_to_do === 'subtract') {
+              destination.long -= 20037508.34 * 2;
+            }
+
+            if (what_to_do === 'add') {
+              destination.long += 20037508.34 * 2;
+            }
+
             //convert lat and long to 3857
             const coordinates = fromLonLat([destination.long, destination.lat]);
 
