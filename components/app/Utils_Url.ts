@@ -53,6 +53,7 @@ const retrieve_path_from_url = (): WalkingPath[] => {
 
   if (path === '') return [];
 
+  //test 
   try {
     // URL decode the string
 

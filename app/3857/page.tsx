@@ -230,6 +230,25 @@ const WalkinPathPage: React.FC = () => {
     }
   };
 
+  const zoomToPath = () => {
+    {
+      if (mapInstanceRef.current) {
+        const coordinates = trip.paths.map((path) => [path.long, path.lat]);
+
+        const lineString = new LineString(coordinates);
+
+        const extent = lineString.getExtent();
+
+        // 30% buffer
+        const expandedExtent = OLBuffer(extent, 0.7);
+
+        mapInstanceRef.current.getView().fit(expandedExtent, {
+          padding: [100, 100, 100, 100],
+        });
+      }
+    }
+  };
+
   //Call this with the list of point geometries to update the path
   const newCoordinatesFromEdit = () => {
     //const featureArray = Array.from(features);
@@ -918,7 +937,7 @@ const WalkinPathPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-wrap flex-col">
+    <div className="h-screen flex flex-wrap flex-col overflow-auto">
       {
         <AddDestinationModal
           handleClose={() => setOpenDestinationModal(false)}
@@ -1004,22 +1023,7 @@ const WalkinPathPage: React.FC = () => {
       {/* Zoom To Path */}
       <button
         className="bg-blue-500 text-white p-2"
-        onClick={() => {
-          if (mapInstanceRef.current) {
-            const coordinates = trip.paths.map((path) => [path.long, path.lat]);
-
-            const lineString = new LineString(coordinates);
-
-            const extent = lineString.getExtent();
-
-            // 30% buffer
-            const expandedExtent = OLBuffer(extent, 0.7);
-
-            mapInstanceRef.current.getView().fit(expandedExtent, {
-              padding: [100, 100, 100, 100],
-            });
-          }
-        }}
+        onClick={() => zoomToPath()}
       >
         Zoom To Path
       </button>
