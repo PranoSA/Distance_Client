@@ -695,6 +695,25 @@ const WalkinPathPage: React.FC = () => {
             (1 + gradient_of_straight_line * gradient_start_of_arc)
         );
 
+        //add reasoning for the direction of the angle
+
+        //atan might be [-pi/2, pi/2]
+        //reason if its actually [pi/2, 3pi/2]
+
+        const angle_from_horizon_curve = Math.atan(
+          (circle_arc_3857[1][1] - circle_arc_3857[0][1]) /
+            (circle_arc_3857[1][0] - circle_arc_3857[0][0])
+        );
+
+        //reason if you need to add pi to the angle
+        // if the circle arc moves towards the left, then add pi
+
+        const moves_left_arc = gradient_start_of_arc < 0;
+
+        const moves_left_straight = current.long - previous.long < 0;
+
+        // if these are opposite, always print the angle
+
         const angle_straight_line = Math.atan(gradient_of_straight_line);
 
         const angle_start_of_arc = Math.atan(gradient_start_of_arc);
@@ -712,8 +731,44 @@ const WalkinPathPage: React.FC = () => {
 
         console.log('Angle Difference:', angle_difference);
 
+        //get length of the straight line
+        const length_line = getLength(lineString, {
+          projection: 'EPSG:3857',
+        });
+
+        // set too_long to true if over the half the circumrfence of the earth
+        // take circumfrence at latitude 1, then latitude 2,
+        // then average, and divide 2
+        const circumfrence_earth = 40075000;
+
+        const cirumfrenceAtLat3857 = (lat_meters: number) => {
+          // convert to 4326
+
+          const radiusEarth = 6371000;
+          const lat = toLonLat([0, lat_meters]);
+
+          // convert to radians
+          const lat_rad = (lat[1] * Math.PI) / 180;
+
+          //return
+          return 2 * Math.PI * radiusEarth * Math.cos(lat_rad);
+        };
+
+        const cirumfrence_average_between_ends =
+          (cirumfrenceAtLat3857(previous.lat) +
+            cirumfrenceAtLat3857(current.lat)) /
+          2;
+
+        const naive_eucledian_distance = Math.sqrt(
+          Math.pow(current.lat - previous.lat, 2) +
+            Math.pow(current.long - previous.long, 2)
+        );
+
+        //const too_long = length_line > cirumfrence_average_between_ends / 2;
+        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
+
         //if the angle difference is more than 20 degrees, then draw the line
-        if (angle_difference < 0.17) {
+        if (angle_difference < 0.17 && !too_long) {
           return;
         }
 
@@ -733,9 +788,73 @@ const WalkinPathPage: React.FC = () => {
           //return;
         }
           */
-
+        //const lineString_3857 = new LineString(circle_arc_3857);
         //style the arc line
         const new_arc_feature = new Feature(lineString_3857);
+
+        //check if the arc is pslit intwo two columns
+        // if it is , draw both
+
+        if (circle_arc_3857.length === 2) {
+          const coord_part_1 = circle_arc_3857[0].slice(2);
+
+          //trimp out any long or
+
+          //convert to 3857
+          const coord_part_1_3857 = coord_part_1.map((coord) =>
+            // @ts-ignore
+            fromLonLat(coord)
+          );
+
+          const coord_part_2 = circle_arc_3857[1].slice(2);
+
+          //convert to 3857
+          const coord_part_2_3857 = coord_part_2.map((coord) =>
+            // @ts-ignore
+            fromLonLat(coord)
+          );
+
+          //do another check for angle difference
+          const gradient_start_of_arc_1 =
+            (coord_part_1_3857[1][1] - coord_part_1_3857[0][1]) /
+            (coord_part_1_3857[1][0] - coord_part_1_3857[0][0]);
+
+          const new_angle_difference = Math.abs(
+            Math.atan(gradient_of_straight_line) -
+              Math.atan(gradient_start_of_arc_1)
+          );
+
+          if (new_angle_difference < 0.17) {
+            return;
+          }
+
+          const arc_feature_1 = new Feature(new LineString(coord_part_1_3857));
+
+          const arc_feature_2 = new Feature(new LineString(coord_part_2_3857));
+
+          arc_feature_1.setStyle(
+            new Style({
+              stroke: new Stroke({
+                color: 'yellow',
+                width: 6,
+              }),
+            })
+          );
+
+          arc_feature_2.setStyle(
+            new Style({
+              stroke: new Stroke({
+                color: 'yellow',
+                width: 6,
+              }),
+            })
+          );
+
+          arcSourceRef.current.addFeature(arc_feature_1);
+          arcSourceRef.current.addFeature(arc_feature_2);
+
+          return;
+        }
 
         //style the arc line lightyellow
         new_arc_feature.setStyle(
