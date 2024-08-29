@@ -937,7 +937,7 @@ const WalkinPathPage: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-wrap flex-col overflow-auto">
+    <div className="flex flex-wrap flex-col overflow-auto overflow-y-auto">
       {
         <AddDestinationModal
           handleClose={() => setOpenDestinationModal(false)}
@@ -983,50 +983,53 @@ const WalkinPathPage: React.FC = () => {
         </h1>
         <h1>
           {' '}
-          Distance is {convertDistanceToPrettyString(calculateDistanceOfPath())}
+          Projected Distance is{' '}
+          {convertDistanceToPrettyString(calculateDistanceOfPath())}
         </h1>
         <h1>
           {' '}
-          Other Distnace is{' '}
+          Distnace is{' '}
           {convertDistanceToPrettyString(calculateOpenLayerDistanceOfFeature())}
         </h1>
       </div>
-      <button
-        className="bg-blue-500 text-white p-2"
-        onClick={() => {
-          setTrip({
-            ...trip,
-            paths: [],
-          });
+      <div className="flex flex-row w-full space-around">
+        <button
+          className="bg-blue-500 flex text-white p-2 w-1/2 m-5 "
+          onClick={() => {
+            setTrip({
+              ...trip,
+              paths: [],
+            });
 
-          //reset URL
-          const url_clear = new URL(window.location.href);
-          url_clear.searchParams.delete('path');
+            //reset URL
+            const url_clear = new URL(window.location.href);
+            url_clear.searchParams.delete('path');
 
-          //push history
-          editHistory.current.push({
-            type: 'clear',
-            index: 0,
-            coordinate: trip.paths.map((path) => {
-              return [path.long, path.lat];
-            }),
-          });
+            //push history
+            editHistory.current.push({
+              type: 'clear',
+              index: 0,
+              coordinate: trip.paths.map((path) => {
+                return [path.long, path.lat];
+              }),
+            });
 
-          tripRef.current = {
-            ...tripRef.current,
-            paths: [],
-          };
-        }}
-      >
-        Reset
-      </button>
-      {/* Zoom To Path */}
-      <button
-        className="bg-blue-500 text-white p-2"
-        onClick={() => zoomToPath()}
-      >
-        Zoom To Path
-      </button>
+            tripRef.current = {
+              ...tripRef.current,
+              paths: [],
+            };
+          }}
+        >
+          Reset
+        </button>
+        {/* Zoom To Path */}
+        <button
+          className="bg-blue-500 flex text-white p-2 w-1/2 m-5"
+          onClick={() => zoomToPath()}
+        >
+          Zoom To Path
+        </button>
+      </div>
     </div>
   );
 };
