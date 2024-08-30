@@ -194,6 +194,8 @@ const WalkinPathPage: React.FC = () => {
     long2: number
   ): WhatToDo => {
     //
+
+    return 'none';
     const eucledianDistanceNone = Math.sqrt(
       Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1, 2)
     );
@@ -578,9 +580,9 @@ const WalkinPathPage: React.FC = () => {
           center: fromLonLat([0, 0]),
           zoom: 2,
           multiWorld: false,
-
+          extent: [-20037508.34, -20048966.1, 20037508.34, 20048966.1],
           //@ts-ignore
-          wrapX: false,
+          wrapX: true,
           projection: new Projection({
             code: 'EPSG:3857',
             units: 'm',
@@ -594,11 +596,15 @@ const WalkinPathPage: React.FC = () => {
       });
 
       //new layer
-      const vectorSource = new VectorSource();
+      const vectorSource = new VectorSource({
+        features: [],
+        wrapX: true,
+      });
 
       //add styling to the line
       const mevectorLayer = new VectorLayer({
         source: vectorSource,
+
         style: new Style({
           stroke: new Stroke({
             color: 'red',

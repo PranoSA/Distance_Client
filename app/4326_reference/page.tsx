@@ -26,7 +26,8 @@ const MapComponent: React.FC = () => {
         view: new View({
           center: fromLonLat([0, 0]),
           zoom: 2,
-          extent: [-20026376.39 * 2, -20048966.1, 20026376.39 * 2, 20048966.1],
+          projection: 'EPSG:4326',
+          extent: [-360, -90, 360, 90],
         }),
       });
 
@@ -54,7 +55,7 @@ const MapComponent: React.FC = () => {
       <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
       {coordinates && (
         <div>
-          <p>Coordinates (EPSG:3857):</p>
+          <p>Coordinates (EPSG:4326):</p>
           <p>X: {coordinates[0]}</p>
           <p>Y: {coordinates[1]}</p>
         </div>
