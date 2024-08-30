@@ -798,7 +798,122 @@ const WalkinPathPage: React.FC = () => {
 
         const lineFeature = new Feature(lineString);
 
-        const crosses_meridian = circle_arc_3857.length === 2;
+        let crosses_meridian = circle_arc_3857.length === 2;
+
+        //What's another way to tell if it crosses the meridian?
+        if (!crosses_meridian) {
+          //tell if circler arc goes from
+          if (previous.long > 0) {
+            //draw a line that crosses the meridian and see if its shorter
+            const distance_to_meridian = 20037508.34 - previous.long;
+            const meridian_to_current = 20037508.34 + current.long;
+
+            const gradient =
+              (current.lat - previous.lat) /
+              (meridian_to_current + distance_to_meridian);
+
+            //create the first line segment using the gradient to the meridian
+            const coord_part_1 = [
+              [previous.long, previous.lat],
+              [20037508.34, previous.lat + gradient * distance_to_meridian],
+            ];
+
+            //create the second line segment using the gradient to the meridian
+            const coord_part_2 = [
+              [-20037508.34, current.lat - gradient * meridian_to_current],
+              [current.long, current.lat],
+            ];
+
+            // create the line strings to measure the length
+            const lineString_3857_part_1 = new LineString(coord_part_1);
+
+            const lineString_3857_part_2 = new LineString(coord_part_2);
+
+            //set distance on point by adding length of the two line segments
+            const distance_of_line_1_euclidean = Math.sqrt(
+              Math.pow(coord_part_1[0][0] - coord_part_1[1][0], 2) +
+                Math.pow(coord_part_1[0][1] - coord_part_1[1][1], 2)
+            );
+
+            const distance_of_line_2_euclidean = Math.sqrt(
+              Math.pow(coord_part_2[0][0] - coord_part_2[1][0], 2) +
+                Math.pow(coord_part_2[0][1] - coord_part_2[1][1], 2)
+            );
+            const distance =
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean;
+
+            const distance_eucledian_of_single_line = Math.sqrt(
+              Math.pow(previous.long - current.long, 2) +
+                Math.pow(previous.lat - current.lat, 2)
+            );
+
+            if (distance < distance_eucledian_of_single_line) {
+              //add the line string to the vector source
+              //vectorSourceRef.current.addFeature(lineFeature);
+
+              crosses_meridian = true;
+
+              //style feature according to this
+            }
+          }
+          if (previous.long < 0) {
+            const distance_to_meridian = 20037508.34 + previous.long;
+            const meridian_to_current = 20037508.34 - current.long;
+
+            const gradient =
+              (current.lat - previous.lat) /
+              (meridian_to_current + distance_to_meridian);
+
+            //create the first line segment using the gradient to the meridian
+            const coord_part_1 = [
+              [previous.long, previous.lat],
+              [-20037508.34, previous.lat + gradient * distance_to_meridian],
+            ];
+
+            //create the second line segment using the gradient to the meridian
+            const coord_part_2 = [
+              [20037508.34, current.lat - gradient * meridian_to_current],
+              [current.long, current.lat],
+            ];
+
+            //add feature and vector source
+            const lineString_3857_part_1 = new LineString(
+              coord_part_1.map((coord) => coord)
+            );
+
+            const lineString_3857_part_2 = new LineString(
+              coord_part_2.map((coord) => coord)
+            );
+
+            //set distance on point by adding length of the two line segments
+            const distance_of_line_1_euclidean = Math.sqrt(
+              Math.pow(coord_part_1[0][0] - coord_part_1[1][0], 2) +
+                Math.pow(coord_part_1[0][1] - coord_part_1[1][1], 2)
+            );
+
+            const distance_of_line_2_euclidean = Math.sqrt(
+              Math.pow(coord_part_2[0][0] - coord_part_2[1][0], 2) +
+                Math.pow(coord_part_2[0][1] - coord_part_2[1][1], 2)
+            );
+
+            const distance =
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean;
+
+            const distance_eucledian_of_single_line = Math.sqrt(
+              Math.pow(previous.long - current.long, 2) +
+                Math.pow(previous.lat - current.lat, 2)
+            );
+
+            if (distance < distance_eucledian_of_single_line) {
+              //add the line string to the vector source
+              //vectorSourceRef.current.addFeature(lineFeature);
+
+              crosses_meridian = true;
+
+              //style feature according to this
+            }
+          }
+        }
 
         if (crosses_meridian) {
           // if coordinate 1 is [-180,0] then clearly it crosses the [-180 ] meridian
@@ -1229,7 +1344,16 @@ const WalkinPathPage: React.FC = () => {
   const calculateDistanceOfPath = () => {
     if (trip) {
       const index = distanceTo.length - 1;
-      return distanceTo[index];
+
+      if (distanceTo.length < 1) return 0;
+
+      //sum up all from 1 to index
+      const total_distance = distanceTo.reduce((acc, curr, i) => {
+        //if (i > index) return acc;
+        return acc + curr;
+      });
+      return total_distance;
+      //return distanceTo[index];
 
       let distance = 0;
       for (let i = 1; i < trip.paths.length; i++) {
