@@ -65,6 +65,9 @@ const WalkinPathPage: React.FC = () => {
   const editHistory = useRef<EditAction[]>([]);
 
   const [distanceTo, setDistanceTo] = useState<number[]>([]);
+  const [nonProjectedDistance, setNonProjectedDistance] = useState<number[]>(
+    []
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -1013,6 +1016,18 @@ const WalkinPathPage: React.FC = () => {
 
             //set the distance on the point
             setDistanceTo(new_distance_list);
+
+            //const
+            const non_projected_distance =
+              getLength(lineString_3857_part_1, {
+                projection: 'EPSG:3857',
+              }) +
+              getLength(lineString_3857_part_2, { projection: 'EPSG:3857' });
+
+            setNonProjectedDistance([
+              ...nonProjectedDistance.slice(0, index),
+              ...[non_projected_distance],
+            ]);
           }
 
           //if the previous coordinate is less than 0
@@ -1070,6 +1085,14 @@ const WalkinPathPage: React.FC = () => {
               })
             );
 
+            const length_combined_line =
+              getLength(lineString_3857_part_1, {
+                projection: 'EPSG:3857',
+              }) +
+              getLength(lineString_3857_part_2, {
+                projection: 'EPSG:3857',
+              });
+
             vectorSourceRef.current.addFeature(lineFeature_1);
 
             vectorSourceRef.current.addFeature(lineFeature_2);
@@ -1092,6 +1115,11 @@ const WalkinPathPage: React.FC = () => {
 
             //set the distance on the point
             setDistanceTo(new_distance_list);
+
+            setNonProjectedDistance([
+              ...nonProjectedDistance.slice(0, index),
+              ...[length_combined_line],
+            ]);
           }
         } else {
           //style line feature
@@ -1113,6 +1141,12 @@ const WalkinPathPage: React.FC = () => {
             ...[distance_of_line_euclidean],
           ]);
 
+          //set projection
+
+          if (lineString === null) {
+            console.log('WHAT THE HECK!!!');
+          }
+
           lineFeature.setStyle(
             new Style({
               stroke: new Stroke({
@@ -1123,6 +1157,15 @@ const WalkinPathPage: React.FC = () => {
           );
 
           vectorSourceRef.current.addFeature(lineFeature);
+
+          const outer_non_projected_distance = getLength(lineString, {
+            projection: 'EPSG:3857',
+          });
+
+          setNonProjectedDistance([
+            ...nonProjectedDistance.slice(0, index),
+            ...[outer_non_projected_distance],
+          ]);
         }
 
         console.log('Length of Arc:', length_of_arc);
@@ -1298,6 +1341,37 @@ const WalkinPathPage: React.FC = () => {
       );
     }
   }, [trip]);
+
+  const shortestPathStartToEnd = () => {
+    if (trip.paths.length < 2) return 0;
+    const point_1 = trip.paths[0];
+
+    const point_2 = trip.paths[trip.paths.length - 1];
+
+    //convert to 4326 for turf
+    const point_1_4326 = toLonLat([point_1.long, point_1.lat]);
+
+    const point_2_4326 = toLonLat([point_2.long, point_2.lat]);
+
+    const circle_arc = turf.greatCircle(
+      turf.point(point_1_4326),
+      turf.point(point_2_4326)
+    );
+
+    //convert to 3857
+    const circle_arc_3857 = circle_arc.geometry.coordinates.map((coord) =>
+      // its laready in 3857
+      //@ts-ignore
+      fromLonLat(coord)
+    );
+
+    //print length of arc
+    const length_of_arc = turf.length(circle_arc, {
+      units: 'meters',
+    });
+
+    return length_of_arc;
+  };
 
   const calculateOpenLayerDistanceOfFeature = () => {
     var Geographic = new Projection({ code: 'EPSG:4326' });
@@ -1550,6 +1624,19 @@ const WalkinPathPage: React.FC = () => {
           {' '}
           Distnace is{' '}
           {convertDistanceToPrettyString(calculateOpenLayerDistanceOfFeature())}
+        </h1>
+        <h1>
+          {''}
+          Staraight Line distance is{' '}
+          {Math.round(
+            nonProjectedDistance.reduce((acc, curr) => acc + curr, 0) / 1000
+          )}{' '}
+          km
+        </h1>
+        <h1>
+          {' '}
+          Distance from start to end is{' '}
+          {convertDistanceToPrettyString(shortestPathStartToEnd())}
         </h1>
       </div>
       <div className="flex flex-row w-full space-around">
