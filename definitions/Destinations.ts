@@ -130,6 +130,7 @@ const MajorCities: Destination[] = [
   { name: 'Kathmandu', long: 85.324, lat: 27.7172 },
   { name: 'Thimphu', long: 89.639, lat: 27.4728 },
   { name: 'Bangaon', long: 88.8235, lat: 23.0487 },
+  { name: 'Islamabad', long: 73.0479, lat: 33.6844 },
 
   //Africa
   { name: 'Cairo', long: 31.2357, lat: 30.0444 },
@@ -233,6 +234,8 @@ const MajorCities: Destination[] = [
   { name: 'Detroit', long: -83.0458, lat: 42.3314 },
   { name: 'Minneapolis', long: -93.265, lat: 44.9778 },
   { name: 'St. Louis', long: -90.1994, lat: 38.627 },
+  { name: 'Guadalajara', long: -103.3505, lat: 20.659698 },
+  { name: 'Monterrey', long: -100.316112, lat: 25.686614 },
 ];
 
 export const Destinations: Destination[] = [

@@ -135,6 +135,19 @@ const WalkinPathPage: React.FC = () => {
           tripRef.current = new_trip;
         }
       } else if (event.key === 'Backspace') {
+        if (openDestinationModal) {
+          return;
+        }
+        if (searchRef.current) {
+          return;
+        }
+
+        console.log('Backspace Pressed');
+
+        //return if search Index Modal is open
+        if (modalIndex !== null) {
+          return;
+        }
         // Handle Backspace
         setTrip({
           ...tripRef.current,
@@ -169,6 +182,8 @@ const WalkinPathPage: React.FC = () => {
 
   const [openDestinationModal, setOpenDestinationModal] =
     useState<boolean>(false);
+
+  const searchRef = useRef<boolean>(false);
 
   type WhatToDo = 'subtract' | 'none' | 'add';
 
@@ -563,6 +578,18 @@ const WalkinPathPage: React.FC = () => {
           center: fromLonLat([0, 0]),
           zoom: 2,
           multiWorld: false,
+
+          //@ts-ignore
+          wrapX: false,
+          projection: new Projection({
+            code: 'EPSG:3857',
+            units: 'm',
+            axisOrientation: 'neu',
+            global: true,
+            metersPerUnit: 1,
+            worldExtent: [-20037508.34, -20037508.34, 20037508.34, 20037508.34],
+            extent: [-20037508.34, -20037508.34, 20037508.34, 20037508.34],
+          }),
         }),
       });
 
@@ -1263,26 +1290,11 @@ const WalkinPathPage: React.FC = () => {
     <div className="flex flex-wrap flex-col overflow-auto overflow-y-auto">
       {
         <AddDestinationModal
-          handleClose={() => setOpenDestinationModal(false)}
+          handleClose={() => {
+            setOpenDestinationModal(false);
+            searchRef.current = false;
+          }}
           handleAdd={(destination) => {
-            const naive_eucledian_distance = Math.sqrt(
-              Math.pow(
-                destination.lat -
-                  tripRef.current.paths[tripRef.current.paths.length - 1].lat,
-                2
-              ) +
-                Math.pow(
-                  destination.long -
-                    tripRef.current.paths[tripRef.current.paths.length - 1]
-                      .long,
-                  2
-                )
-            );
-
-            const circumfrence_earth = 40075000;
-
-            const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
-
             /*if (too_long) {
               if (destination.long > 0) {
                 destination.long -= 20037508.34 * 2;
@@ -1290,22 +1302,27 @@ const WalkinPathPage: React.FC = () => {
                 destination.long += 20037508.34 * 2;
               }
             }*/
-            const what_to_do = findOutWhatToDoFromPoints(
-              tripRef.current.paths[tripRef.current.paths.length - 1].lat,
-              tripRef.current.paths[tripRef.current.paths.length - 1].long,
-              destination.lat,
-              destination.long
-            );
 
-            console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
+            /*
+            if (tripRef.current.paths.length > 0) {
+              const what_to_do = findOutWhatToDoFromPoints(
+                tripRef.current.paths[tripRef.current.paths.length - 1].lat,
+                tripRef.current.paths[tripRef.current.paths.length - 1].long,
+                destination.lat,
+                destination.long
+              );
 
-            if (what_to_do === 'subtract') {
-              destination.long -= 20037508.34 * 2;
+             console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
+
+              if (what_to_do === 'subtract') {
+                destination.long -= 20037508.34 * 2;
+              }
+
+              if (what_to_do === 'add') {
+                destination.long += 20037508.34 * 2;
+              }
             }
-
-            if (what_to_do === 'add') {
-              destination.long += 20037508.34 * 2;
-            }
+              */
 
             //convert lat and long to 3857
             const coordinates = fromLonLat([destination.long, destination.lat]);
@@ -1335,7 +1352,10 @@ const WalkinPathPage: React.FC = () => {
             setOpenDestinationModal(false);
           }}
           show={openDestinationModal}
-          handleOpen={() => setOpenDestinationModal(true)}
+          handleOpen={() => {
+            setOpenDestinationModal(true);
+            searchRef.current = true;
+          }}
         />
       }
       <div ref={mapRef} className="w-full h-[60vh] relative"></div>
