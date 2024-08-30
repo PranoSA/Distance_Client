@@ -64,6 +64,8 @@ const WalkinPathPage: React.FC = () => {
 
   const editHistory = useRef<EditAction[]>([]);
 
+  const [distanceTo, setDistanceTo] = useState<number[]>([]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.ctrlKey && event.key === 'z') {
@@ -196,30 +198,6 @@ const WalkinPathPage: React.FC = () => {
     //
 
     return 'none';
-    const eucledianDistanceNone = Math.sqrt(
-      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1, 2)
-    );
-
-    const eucledianDistanceAdd = Math.sqrt(
-      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1 + 20037508.34 * 2, 2)
-    );
-
-    const eucledianDistanceSub = Math.sqrt(
-      Math.pow(lat2 - lat1, 2) + Math.pow(long2 - long1 - 20037508.34 * 2, 2)
-    );
-
-    //panic if eucledianDistanceNone is less than both eucledianDistanceAdd and eucledianDistanceSub
-    if (eucledianDistanceNone < eucledianDistanceAdd) {
-      if (eucledianDistanceNone < eucledianDistanceSub) {
-        return 'none';
-      }
-    }
-
-    if (eucledianDistanceAdd < eucledianDistanceSub) {
-      return 'add';
-    }
-
-    return 'subtract';
   };
 
   //on mount useEffect, un compress the path to the coordinate
@@ -277,8 +255,6 @@ const WalkinPathPage: React.FC = () => {
 
         const circumfrence_earth = 40075000;
 
-        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
-
         //
 
         const what_to_do = findOutWhatToDoFromPoints(
@@ -288,8 +264,6 @@ const WalkinPathPage: React.FC = () => {
           long
         );
 
-        console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
-
         if (what_to_do === 'subtract') {
           long -= 20037508.34 * 2;
         }
@@ -297,18 +271,6 @@ const WalkinPathPage: React.FC = () => {
         if (what_to_do === 'add') {
           long += 20037508.34 * 2;
         }
-
-        /*if (too_long) {
-          //if ahead of the previous point, then subtract
-          //if behind the previous point, then add
-          if (
-            long > tripRef.current.paths[tripRef.current.paths.length - 1].long
-          ) {
-            long -= 20037508.34 * 2;
-          } else {
-            long += 20037508.34 * 2;
-          }
-        }*/
       }
 
       const new_trip = {
@@ -377,11 +339,6 @@ const WalkinPathPage: React.FC = () => {
       long: 0,
     };
 
-    const old_coordinate = {
-      lat: 0,
-      long: 0,
-    };
-
     points.forEach((feature, i) => {
       // Get all features from the vector source
       //const features = vectorSourceRef.current.getFeatures();
@@ -430,61 +387,10 @@ const WalkinPathPage: React.FC = () => {
       return !found;
     });
 
-    /* if (unfound_index > 0) {
-      //test for too long
-      const naive_eucledian_distance = Math.sqrt(
-        Math.pow(changed_coordinate.lat - old_paths[unfound_index - 1].lat, 2) +
-          Math.pow(
-            changed_coordinate.long - old_paths[unfound_index - 1].long,
-            2
-          )
-      );
-      const circumfrence_earth = 40075000;
-
-      const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
-
-      if (too_long) {
-        if (changed_coordinate.long > old_paths[unfound_index - 1].long) {
-          changed_coordinate.long -= 20037508.34 * 2;
-        } else {
-          changed_coordinate.long += 20037508.34 * 2;
-        }
-      }
-    }*/
-
     if (unfound_index !== -1) {
       const old_coordinate = old_paths[unfound_index];
 
       old_paths[unfound_index] = changed_coordinate;
-
-      //now you need to check if too long for all after the index
-      for (let i = unfound_index + 1; i < old_paths.length; i++) {
-        const next_coordinate = old_paths[i];
-
-        /* const naive_eucledian_distance = Math.sqrt(
-          Math.pow(changed_coordinate.lat - next_coordinate.lat, 2) +
-            Math.pow(changed_coordinate.long - next_coordinate.long, 2)
-        );
-
-        const circumfrence_earth = 40075000;
-
-        const too_long = naive_eucledian_distance * 2 > circumfrence_earth;
-
-        if (too_long) {
-          if (old_paths[i].long > old_paths[i - 1].long) {
-            old_paths[i].long -= 20037508.34 * 2;
-          } else {
-            old_paths[i].long += 20037508.34 * 2;
-          }
-        }
-        */
-        //update history with old coordinate
-        /*editHistory.current.push({
-            type: 'edit',
-            index: i,
-            coordinate: [[next_coordinate.long, next_coordinate.lat]],
-          });*/
-      }
 
       //make a copy of the old long and lat
       const old_long = old_coordinate.long;
@@ -776,19 +682,6 @@ const WalkinPathPage: React.FC = () => {
         newCoordinatesFromEdit();
       });
 
-      // Draw interaction to add points by dragging
-      /*const draw = new Draw({
-        source: vectorSourceRef.current,
-        type: 'LineString',
-        freehandCondition: shiftKeyOnly,
-      });
-
-      draw.on('drawend', (event) => {
-        newCoordinatesFromEdit();
-      });
-
-      map.addInteraction(draw);*/
-
       map.addInteraction(modify);
     }
   }, [mapRef.current]);
@@ -819,14 +712,7 @@ const WalkinPathPage: React.FC = () => {
         const previous = trip.paths[index - 1];
         const current = trip.paths[index];
 
-        const eucledian_distance_line = Math.sqrt(
-          Math.pow(current.lat - previous.lat, 2) +
-            Math.pow(current.long - previous.long, 2)
-        );
-
-        const circumfrence_earth = 40075000;
         //const too_long = length_line > cirumfrence_average_between_ends / 2;
-        const too_long = eucledian_distance_line * 2 > circumfrence_earth;
 
         //if too lng, subtract 20037508.34*2 from the longitudes
         // and then draw the line
@@ -840,8 +726,6 @@ const WalkinPathPage: React.FC = () => {
           current.lat,
           current.long
         );
-
-        console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
 
         if (what_to_do === 'subtract') {
           current.long -= 20037508.34 * 2;
@@ -869,34 +753,6 @@ const WalkinPathPage: React.FC = () => {
               ...trip.paths.slice(index + 1),
             ],
           });
-        }
-
-        if (too_long) {
-          //break out of if
-          /*  if (current.long > previous.long) {
-            current.long -= 20037508.34 * 2;
-          } else {
-            current.long += 20037508.34 * 2;
-          }*/
-          /*
-                  setTrip({
-                    ...trip,
-                    paths: [
-                      ...trip.paths.slice(0, index),
-                      { lat: current.lat, long: current.long },
-                      ...trip.paths.slice(index + 1),
-                    ],
-                  });
-        
-                  tripRef.current = {
-                    ...tripRef.current,
-                    paths: [
-                      ...tripRef.current.paths.slice(0, index),
-                      { lat: current.lat, long: current.long },
-                      ...tripRef.current.paths.slice(index + 1),
-                    ],
-                  };
-                  */
         }
 
         const lineString = new LineString([
@@ -945,26 +801,12 @@ const WalkinPathPage: React.FC = () => {
         const crosses_meridian = circle_arc_3857.length === 2;
 
         if (crosses_meridian) {
-          //break the straight line into two
-          // just use a linear gradient
-          // The gradient will travel through the meridian
-          // so will be less than 180 degrees at all time
-
-          //so like -130 to 270 degrees will be
-          // 140 degrees
-          // - 150 to 300 will be 80 degrees
-          //etc
-
-          //find out what meridian it crosses
-
           // if coordinate 1 is [-180,0] then clearly it crosses the [-180 ] meridian
           //if coordinate 2 is [180,0] then clearly it crosses the [180] meridian
 
           //stop using the circle_arc, that has nothing to do with this
 
           //just use the line line coordiantes
-
-          let horizontal_distance = 0;
 
           if (previous.long > 0) {
             ///add the distance of the current coordinate to the meridian
@@ -1024,6 +866,38 @@ const WalkinPathPage: React.FC = () => {
             vectorSourceRef.current.addFeature(lineFeature_1);
 
             vectorSourceRef.current.addFeature(lineFeature_2);
+
+            //set distance on point by adding length of the two line segments
+            const distance_of_line_1 = getLength(lineString_3857_part_1, {
+              projection: 'EPSG:3857',
+            });
+
+            const distance_of_line_2 = getLength(lineString_3857_part_2, {
+              projection: 'EPSG:3857',
+            });
+            const dist = distance_of_line_1 + distance_of_line_2;
+
+            //const new_distance_list: number[] = distanceTo.slice(0, index);
+            //new_distance_list.push(dist);
+
+            //set distance on point by adding length of the two line segments
+            const distance_of_line_1_euclidean = Math.sqrt(
+              Math.pow(coord_part_1[0][0] - coord_part_1[1][0], 2) +
+                Math.pow(coord_part_1[0][1] - coord_part_1[1][1], 2)
+            );
+
+            const distance_of_line_2_euclidean = Math.sqrt(
+              Math.pow(coord_part_2[0][0] - coord_part_2[1][0], 2) +
+                Math.pow(coord_part_2[0][1] - coord_part_2[1][1], 2)
+            );
+
+            const new_distance_list: number[] = distanceTo.slice(0, index);
+            new_distance_list.push(
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean
+            );
+
+            //set the distance on the point
+            setDistanceTo(new_distance_list);
           }
 
           //if the previous coordinate is less than 0
@@ -1084,9 +958,45 @@ const WalkinPathPage: React.FC = () => {
             vectorSourceRef.current.addFeature(lineFeature_1);
 
             vectorSourceRef.current.addFeature(lineFeature_2);
+
+            //set distance on point by adding length of the two line segments
+            const distance_of_line_1_euclidean = Math.sqrt(
+              Math.pow(coord_part_1[0][0] - coord_part_1[1][0], 2) +
+                Math.pow(coord_part_1[0][1] - coord_part_1[1][1], 2)
+            );
+
+            const distance_of_line_2_euclidean = Math.sqrt(
+              Math.pow(coord_part_2[0][0] - coord_part_2[1][0], 2) +
+                Math.pow(coord_part_2[0][1] - coord_part_2[1][1], 2)
+            );
+
+            const new_distance_list: number[] = distanceTo.slice(0, index);
+            new_distance_list.push(
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean
+            );
+
+            //set the distance on the point
+            setDistanceTo(new_distance_list);
           }
         } else {
           //style line feature
+          if (!crosses_meridian) {
+          }
+
+          /*          const distance_of_line = getLength(lineString_3857, {
+            projection: 'EPSG:3857',
+          });
+*/
+
+          const distance_of_line_euclidean = Math.sqrt(
+            Math.pow(previous.long - current.long, 2) +
+              Math.pow(previous.lat - current.lat, 2)
+          );
+          //set the distance on the point
+          setDistanceTo([
+            ...distanceTo.slice(0, index),
+            ...[distance_of_line_euclidean],
+          ]);
 
           lineFeature.setStyle(
             new Style({
@@ -1101,7 +1011,6 @@ const WalkinPathPage: React.FC = () => {
         }
 
         console.log('Length of Arc:', length_of_arc);
-        console.log('Eucledian Distance:', eucledian_distance_line);
 
         //calculate the gradient difference
         //[y2-y1]/[x2-x1]
@@ -1115,27 +1024,10 @@ const WalkinPathPage: React.FC = () => {
         //find the angle between the two gradients
         //if the angle is more than 10 degrees, then draw the line
 
-        const angle = Math.atan(
-          (gradient_of_straight_line - gradient_start_of_arc) /
-            (1 + gradient_of_straight_line * gradient_start_of_arc)
-        );
-
         //add reasoning for the direction of the angle
 
         //atan might be [-pi/2, pi/2]
         //reason if its actually [pi/2, 3pi/2]
-
-        const angle_from_horizon_curve = Math.atan(
-          (circle_arc_3857[1][1] - circle_arc_3857[0][1]) /
-            (circle_arc_3857[1][0] - circle_arc_3857[0][0])
-        );
-
-        //reason if you need to add pi to the angle
-        // if the circle arc moves towards the left, then add pi
-
-        const moves_left_arc = gradient_start_of_arc < 0;
-
-        const moves_left_straight = current.long - previous.long < 0;
 
         // if these are opposite, always print the angle
 
@@ -1272,18 +1164,6 @@ const WalkinPathPage: React.FC = () => {
       });
     }
 
-    // Add line string connecting all points
-    /* if (trip.paths.length > 1) {
-      const coordinates = trip.paths.map((path) =>
-        fromLonLat([path.long, path.lat])
-      );
-
-      const lineString = new LineString(coordinates);
-      const lineFeature = new Feature(lineString);
-
-      vectorSourceRef.current.addFeature(lineFeature);
-    }*/
-
     //add the vector source to the map
     if (mapInstanceRef.current) {
       mapInstanceRef.current.addLayer(
@@ -1348,6 +1228,9 @@ const WalkinPathPage: React.FC = () => {
 
   const calculateDistanceOfPath = () => {
     if (trip) {
+      const index = distanceTo.length - 1;
+      return distanceTo[index];
+
       let distance = 0;
       for (let i = 1; i < trip.paths.length; i++) {
         const previous = trip.paths[i - 1];
