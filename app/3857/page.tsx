@@ -430,7 +430,7 @@ const WalkinPathPage: React.FC = () => {
       return !found;
     });
 
-    if (unfound_index > 0) {
+    /* if (unfound_index > 0) {
       //test for too long
       const naive_eucledian_distance = Math.sqrt(
         Math.pow(changed_coordinate.lat - old_paths[unfound_index - 1].lat, 2) +
@@ -450,7 +450,7 @@ const WalkinPathPage: React.FC = () => {
           changed_coordinate.long += 20037508.34 * 2;
         }
       }
-    }
+    }*/
 
     if (unfound_index !== -1) {
       const old_coordinate = old_paths[unfound_index];
@@ -461,7 +461,7 @@ const WalkinPathPage: React.FC = () => {
       for (let i = unfound_index + 1; i < old_paths.length; i++) {
         const next_coordinate = old_paths[i];
 
-        const naive_eucledian_distance = Math.sqrt(
+        /* const naive_eucledian_distance = Math.sqrt(
           Math.pow(changed_coordinate.lat - next_coordinate.lat, 2) +
             Math.pow(changed_coordinate.long - next_coordinate.long, 2)
         );
@@ -477,7 +477,7 @@ const WalkinPathPage: React.FC = () => {
             old_paths[i].long += 20037508.34 * 2;
           }
         }
-
+        */
         //update history with old coordinate
         /*editHistory.current.push({
             type: 'edit',
@@ -904,6 +904,12 @@ const WalkinPathPage: React.FC = () => {
           [current.long, current.lat],
         ]);
 
+        const color_red = Math.floor((255 * (index + 1)) / trip.paths.length);
+
+        const color = `rgb(${color_red},${255 - color_red}, ${
+          255 - color_red
+        })`;
+
         //along side, draw the shortest path between the two points
         //using turf and openlayers
 
@@ -936,7 +942,163 @@ const WalkinPathPage: React.FC = () => {
 
         const lineFeature = new Feature(lineString);
 
-        vectorSourceRef.current.addFeature(lineFeature);
+        const crosses_meridian = circle_arc_3857.length === 2;
+
+        if (crosses_meridian) {
+          //break the straight line into two
+          // just use a linear gradient
+          // The gradient will travel through the meridian
+          // so will be less than 180 degrees at all time
+
+          //so like -130 to 270 degrees will be
+          // 140 degrees
+          // - 150 to 300 will be 80 degrees
+          //etc
+
+          //find out what meridian it crosses
+
+          // if coordinate 1 is [-180,0] then clearly it crosses the [-180 ] meridian
+          //if coordinate 2 is [180,0] then clearly it crosses the [180] meridian
+
+          //stop using the circle_arc, that has nothing to do with this
+
+          //just use the line line coordiantes
+
+          let horizontal_distance = 0;
+
+          if (previous.long > 0) {
+            ///add the distance of the current coordinate to the meridian
+            // and the distance of the previous coordinate to the meridian
+            const distance_to_meridian = 20037508.34 - previous.long;
+            const meridian_to_current = 20037508.34 + current.long;
+
+            const gradient =
+              (current.lat - previous.lat) /
+              (meridian_to_current + distance_to_meridian);
+
+            //create the first line segment using the gradient to the meridian
+            const coord_part_1 = [
+              [previous.long, previous.lat],
+              [20037508.34, previous.lat + gradient * distance_to_meridian],
+            ];
+
+            //create the second line segment using the gradient to the meridian
+            const coord_part_2 = [
+              [-20037508.34, current.lat - gradient * meridian_to_current],
+              [current.long, current.lat],
+            ];
+
+            //add feature and vector source
+            const lineString_3857_part_1 = new LineString(coord_part_1);
+
+            const lineString_3857_part_2 = new LineString(coord_part_2);
+
+            const lineFeature_1 = new Feature(lineString_3857_part_1);
+
+            const lineFeature_2 = new Feature(lineString_3857_part_2);
+
+            //style feature according to this
+
+            //divide 255 by the current index divided by the length of the path
+            // so that the color is more intense at the start and less intense at the end
+
+            //style
+            lineFeature_1.setStyle(
+              new Style({
+                stroke: new Stroke({
+                  color: color,
+                  width: 6,
+                }),
+              })
+            );
+
+            lineFeature_2.setStyle(
+              new Style({
+                stroke: new Stroke({
+                  color: color,
+                  width: 6,
+                }),
+              })
+            );
+
+            vectorSourceRef.current.addFeature(lineFeature_1);
+
+            vectorSourceRef.current.addFeature(lineFeature_2);
+          }
+
+          //if the previous coordinate is less than 0
+          if (previous.long < 0) {
+            ///add the distance of the current coordinate to the meridian
+            // and the distance of the previous coordinate to the meridian
+            const distance_to_meridian = 20037508.34 + previous.long;
+            const meridian_to_current = 20037508.34 - current.long;
+
+            const gradient =
+              (current.lat - previous.lat) /
+              (meridian_to_current + distance_to_meridian);
+
+            //create the first line segment using the gradient to the meridian
+            const coord_part_1 = [
+              [previous.long, previous.lat],
+              [-20037508.34, previous.lat + gradient * distance_to_meridian],
+            ];
+
+            //create the second line segment using the gradient to the meridian
+            const coord_part_2 = [
+              [20037508.34, current.lat - gradient * meridian_to_current],
+              [current.long, current.lat],
+            ];
+
+            //add feature and vector source
+            const lineString_3857_part_1 = new LineString(
+              coord_part_1.map((coord) => coord)
+            );
+
+            const lineString_3857_part_2 = new LineString(
+              coord_part_2.map((coord) => coord)
+            );
+
+            const lineFeature_1 = new Feature(lineString_3857_part_1);
+
+            const lineFeature_2 = new Feature(lineString_3857_part_2);
+
+            //style
+            lineFeature_1.setStyle(
+              new Style({
+                stroke: new Stroke({
+                  color: color,
+                  width: 6,
+                }),
+              })
+            );
+
+            lineFeature_2.setStyle(
+              new Style({
+                stroke: new Stroke({
+                  color: color,
+                  width: 6,
+                }),
+              })
+            );
+
+            vectorSourceRef.current.addFeature(lineFeature_1);
+
+            vectorSourceRef.current.addFeature(lineFeature_2);
+          }
+        } else {
+          //style line feature
+
+          lineFeature.setStyle(
+            new Style({
+              stroke: new Stroke({
+                color: color,
+                width: 6,
+              }),
+            })
+          );
+
+          vectorSourceRef.current.addFeature(lineFeature);
+        }
 
         console.log('Length of Arc:', length_of_arc);
         console.log('Eucledian Distance:', eucledian_distance_line);
