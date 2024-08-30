@@ -69,6 +69,8 @@ const WalkinPathPage: React.FC = () => {
     []
   );
 
+  const previousShortestDistanceArc = useRef<Feature | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.ctrlKey && event.key === 'z') {
@@ -1365,10 +1367,107 @@ const WalkinPathPage: React.FC = () => {
       fromLonLat(coord)
     );
 
+    if (previousShortestDistanceArc.current) {
+      //remove the previous shortest distance arc
+      arcSourceRef.current.removeFeature(previousShortestDistanceArc.current);
+    }
+
     //print length of arc
     const length_of_arc = turf.length(circle_arc, {
       units: 'meters',
     });
+
+    //maybe add arc to map with different styling, maybe light green
+    //add the line string to the vector source
+
+    //
+    if (circle_arc_3857.length === 2) {
+      const circle_arc_coverted_1 = circle_arc_3857[0]
+        .filter((coord, i) => {
+          //if either [0] or [1] is NaN, then remove
+          //@ts-ignore
+          if (isNaN(coord[0])) {
+            return false;
+          }
+          //@ts-ignore
+          if (isNaN(coord[1])) {
+            return false;
+          }
+          return true;
+        })
+
+        .map((coord) =>
+          // @ts-ignore
+          fromLonLat(coord)
+        );
+
+      const circle_arc_coverted_2 = circle_arc_3857[1]
+        .filter((coord, i) => {
+          //if either [0] or [1] is NaN, then remove
+          //@ts-ignore
+          if (isNaN(coord[0])) {
+            return false;
+          }
+          //@ts-ignore
+          if (isNaN(coord[1])) {
+            return false;
+          }
+          return true;
+        })
+        .map((coord) =>
+          // @ts-ignore
+          fromLonLat(coord)
+        );
+      //its splitting the merdiian
+      const new_arc_feature_1 = new Feature(
+        //@ts-ignore
+        new LineString(circle_arc_coverted_1)
+      );
+
+      const new_arc_feature_2 = new Feature(
+        //@ts-ignore
+        new LineString(circle_arc_coverted_2)
+      );
+
+      new_arc_feature_1.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'lightgreen',
+            width: 6,
+          }),
+        })
+      );
+
+      new_arc_feature_2.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'lightgreen',
+            width: 6,
+          }),
+        })
+      );
+
+      //add the line string to the vector source
+      arcSourceRef.current.addFeature(new_arc_feature_1);
+
+      arcSourceRef.current.addFeature(new_arc_feature_2);
+    } else {
+      const new_arc_feature = new Feature(new LineString(circle_arc_3857));
+
+      new_arc_feature.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'lightgreen',
+            width: 6,
+          }),
+        })
+      );
+
+      //style the arc line lightyellow
+      previousShortestDistanceArc.current = new_arc_feature;
+
+      arcSourceRef.current.addFeature(new_arc_feature);
+    }
 
     return length_of_arc;
   };
