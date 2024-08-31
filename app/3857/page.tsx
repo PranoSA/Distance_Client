@@ -13,7 +13,7 @@ import { buffer as OLBuffer } from 'ol/extent';
 
 import { Feature, Map as OLMap, View } from 'ol';
 import TileLayer from 'ol/layer/Tile';
-import { fromLonLat, Projection, toLonLat } from 'ol/proj';
+import { fromLonLat, Projection, toLonLat, getUserProjection } from 'ol/proj';
 import { OSM } from 'ol/source';
 import { Geometry, LineString, Point } from 'ol/geom';
 import Modify, { ModifyEvent } from 'ol/interaction/Modify';
@@ -68,6 +68,66 @@ const WalkinPathPage: React.FC = () => {
   const [nonProjectedDistance, setNonProjectedDistance] = useState<number[]>(
     []
   );
+
+  const distanceAlongLineString = (lineString: LineString): number => {
+    // split the line string into 100 points
+    const points = lineString.getCoordinates();
+
+    //split the line string into 100 points
+
+    const num_steps = 2500;
+    const gradient =
+      (points[1][1] - points[0][1]) / (points[1][0] - points[0][0]);
+    const step = (points[1][0] - points[0][0]) / (num_steps - 1);
+
+    const new_points: Coordinate[] = [];
+
+    for (let i = 0; i < num_steps; i++) {
+      new_points.push([
+        points[0][0] + i * step,
+        points[0][1] + i * gradient * step,
+      ]);
+    }
+
+    // return distance along the new line string
+    return new_points.reduce((acc, point, index) => {
+      if (index === 0) {
+        return 0;
+      }
+
+      const current_point_4326 = toLonLat([point[0], point[1]]);
+      const previous_point_4326 = toLonLat([
+        new_points[index - 1][0],
+        new_points[index - 1][1],
+      ]);
+
+      return acc + getDistance(previous_point_4326, current_point_4326);
+    }, 0);
+
+    //get the distance of each point to the next point
+    const distances = points.map((point, index) => {
+      if (index === points.length - 1) {
+        return 0;
+      }
+
+      // transform to 4326??
+
+      const point_4326 = toLonLat([point[0], point[1]]);
+      const next_point_4326 = toLonLat([
+        points[index + 1][0],
+        points[index + 1][1],
+      ]);
+
+      return getDistance(point_4326, next_point_4326);
+    });
+
+    //sum the distances
+    const total_distance = distances.reduce((acc, distance) => {
+      return acc + distance;
+    }, 0);
+
+    return total_distance;
+  };
 
   const previousShortestDistanceArc = useRef<Feature | null>(null);
 
@@ -238,7 +298,9 @@ const WalkinPathPage: React.FC = () => {
 
   // compress the path, and save it to the url
   useEffect(() => {
-    update_url_based_on_path_string(trip);
+    //take trip to be th tripRef.current for now on
+
+    update_url_based_on_path_string(tripRef.current);
     console.log('Trip has changed', trip);
   }, [trip]);
 
@@ -705,6 +767,9 @@ const WalkinPathPage: React.FC = () => {
 
     vectorSourceRef.current.addFeatures(features);
 
+    const projectedDistance: number[] = [];
+    const unProjectedDistance: number[] = [];
+
     //calcualte the line string by iterating starting from
     // 0-1, 1-2
     if (trip.paths.length > 1) {
@@ -1017,19 +1082,26 @@ const WalkinPathPage: React.FC = () => {
             );
 
             //set the distance on the point
-            setDistanceTo(new_distance_list);
+
+            projectedDistance.push(
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean
+            );
 
             //const
             const non_projected_distance =
-              getLength(lineString_3857_part_1, {
-                projection: 'EPSG:3857',
-              }) +
-              getLength(lineString_3857_part_2, { projection: 'EPSG:3857' });
+              distance_of_line_1 + distance_of_line_2;
 
-            setNonProjectedDistance([
-              ...nonProjectedDistance.slice(0, index),
-              ...[non_projected_distance],
-            ]);
+            /*unProjectedDistance.push(
+              lineString_3857_part_1.getLength() +
+                lineString_3857_part_2.getLength()
+            );*/
+            const distance_lines =
+              distanceAlongLineString(lineString_3857_part_1) +
+              distanceAlongLineString(lineString_3857_part_2);
+
+            unProjectedDistance.push(distance_lines);
+
+            // unProjectedDistance.push(non_projected_distance);
           }
 
           //if the previous coordinate is less than 0
@@ -1116,12 +1188,19 @@ const WalkinPathPage: React.FC = () => {
             );
 
             //set the distance on the point
-            setDistanceTo(new_distance_list);
+            projectedDistance.push(
+              distance_of_line_1_euclidean + distance_of_line_2_euclidean
+            );
 
-            setNonProjectedDistance([
-              ...nonProjectedDistance.slice(0, index),
-              ...[length_combined_line],
-            ]);
+            /*unProjectedDistance.push(
+              lineString_3857_part_1.getLength() +
+                lineString_3857_part_2.getLength()
+            );*/
+            const distance_lines =
+              distanceAlongLineString(lineString_3857_part_1) +
+              distanceAlongLineString(lineString_3857_part_2);
+
+            unProjectedDistance.push(distance_lines);
           }
         } else {
           //style line feature
@@ -1138,10 +1217,8 @@ const WalkinPathPage: React.FC = () => {
               Math.pow(previous.lat - current.lat, 2)
           );
           //set the distance on the point
-          setDistanceTo([
-            ...distanceTo.slice(0, index),
-            ...[distance_of_line_euclidean],
-          ]);
+
+          projectedDistance.push(distance_of_line_euclidean);
 
           //set projection
 
@@ -1164,10 +1241,11 @@ const WalkinPathPage: React.FC = () => {
             projection: 'EPSG:3857',
           });
 
-          setNonProjectedDistance([
-            ...nonProjectedDistance.slice(0, index),
-            ...[outer_non_projected_distance],
-          ]);
+          //set the distance on the point
+          //unProjectedDistance.push(lineString.getLength());
+          const distance_lines = distanceAlongLineString(lineString);
+          //unProjectedDistance.push(outer_non_projected_distance);
+          unProjectedDistance.push(distance_lines);
         }
 
         console.log('Length of Arc:', length_of_arc);
@@ -1322,6 +1400,9 @@ const WalkinPathPage: React.FC = () => {
         //add the line string to the vector source
         //vectorSourceRef.current.addFeature(new_arc_feature);
       });
+
+      setDistanceTo(projectedDistance);
+      setNonProjectedDistance(unProjectedDistance);
     }
 
     //add the vector source to the map
@@ -1500,6 +1581,30 @@ const WalkinPathPage: React.FC = () => {
 
       //distanceTo but specify 300913
 
+      //use turf to calculate the distance
+
+      const point_1_4326 = toLonLat([previous.long, previous.lat]);
+
+      const point_2_4326 = toLonLat([current.long, current.lat]);
+
+      const circle_arc = turf.greatCircle(
+        turf.point(point_1_4326),
+        turf.point(point_2_4326)
+      );
+
+      //convert to 3857
+      const circle_arc_3857 = circle_arc.geometry.coordinates.map((coord) =>
+        // its laready in 3857
+        //@ts-ignore
+        fromLonLat(coord)
+      );
+
+      const length_of_arc = turf.length(circle_arc, {
+        units: 'meters',
+      });
+
+      //return length_of_arc;
+      distance += length_of_arc;
       //create line
       var line = new LineString([coordinate1, coordinate2]);
 
@@ -1508,7 +1613,7 @@ const WalkinPathPage: React.FC = () => {
         projection: Mercator,
       });
 
-      distance += distanceLine;
+      //distance += distanceLine;
     }
 
     return distance;
@@ -1611,6 +1716,8 @@ const WalkinPathPage: React.FC = () => {
 
       //create line
       var line = new LineString([coordinate1, coordinate2]);
+
+      line.getLength();
 
       //get the distance
       var distanceLine = getLength(line, {
