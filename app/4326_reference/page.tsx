@@ -12,7 +12,7 @@ import { Coordinate } from 'ol/coordinate';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import * as turf from '@turf/turf';
-import { Polygon } from 'ol/geom';
+import { LineString, Polygon } from 'ol/geom';
 
 const MapComponent: React.FC = () => {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -21,6 +21,8 @@ const MapComponent: React.FC = () => {
   const [circle_radius, set_circle_radius] = useState<number>(0.0);
 
   const circleVectorLayer = useRef<VectorLayer | null>(null);
+
+  const gridVectorLayer = useRef<VectorLayer<VectorSource> | null>(null);
 
   // when circle_radius, or coordinates change, update the circle
   useEffect(() => {
@@ -47,11 +49,48 @@ const MapComponent: React.FC = () => {
     }
   }, [coordinates, circle_radius]);
 
+  const createLatLonLines = () => {
+    const features = [];
+    for (let i = -180; i <= 180; i += 30) {
+      const coords = [];
+      for (let j = -90; j <= 90; j += 30) {
+        coords.push(fromLonLat([i, j], 'EPSG:4326'));
+      }
+      features.push(
+        new Feature({
+          geometry: new LineString(coords),
+        })
+      );
+    }
+    for (let i = -90; i <= 90; i += 30) {
+      const coords = [];
+      for (let j = -180; j <= 180; j += 30) {
+        coords.push(fromLonLat([j, i]));
+      }
+      features.push(
+        new Feature({
+          geometry: new LineString(coords),
+        })
+      );
+    }
+    return features;
+  };
+
   useEffect(() => {
     if (mapRef.current) {
       circleVectorLayer.current = new VectorLayer({
         source: new VectorSource(),
       });
+
+      const gridLayer = new VectorLayer({
+        source: new VectorSource(),
+      });
+
+      const features = createLatLonLines();
+
+      //add the features to the grid layer
+      //@ts-ignore
+      gridLayer.getSource().addFeatures(features);
 
       const map = new Map({
         target: mapRef.current,
@@ -60,6 +99,7 @@ const MapComponent: React.FC = () => {
             source: new OSM(),
           }),
           circleVectorLayer.current,
+          gridLayer,
         ],
         view: new View({
           center: fromLonLat([0, 0]),

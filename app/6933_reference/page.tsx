@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import 'ol/ol.css';
-import { Feature, Map, View } from 'ol';
+import { Feature, Graticule, Map, View } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import { fromLonLat, toLonLat } from 'ol/proj';
@@ -18,6 +18,7 @@ import proj4 from 'proj4';
 import { get as getProjection } from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
 import { Stroke, Style } from 'ol/style';
+import { Control } from 'ol/control';
 
 proj4.defs(
   'EPSG:27700',
@@ -83,7 +84,7 @@ const MapComponent: React.FC = () => {
   // Function to create latitude and longitude lines
   const createLatLonLines = () => {
     const features: Feature<LineString>[] = [];
-    const latitudes = [30, 60, 90];
+    const latitudes = [-75, -60, -45, -30, 0, 30, 45, 60, 75];
     const longitudes = [-180, -120, -60, 0, 60, 120, 180];
 
     // Create latitude lines
@@ -92,11 +93,38 @@ const MapComponent: React.FC = () => {
       for (let lon = -180; lon <= 180; lon += 1) {
         coords.push(fromLonLat([lon, lat], 'EPSG:6933'));
       }
-      features.push(
-        new Feature({
-          geometry: new LineString(coords),
-        })
-      );
+      const new_feature = new Feature({
+        geometry: new LineString(coords),
+      });
+
+      //style feature according to this
+      // 0 = black
+      // -30, 30 = red
+      // -45, 45 = green
+      // -60, 60 = blue
+      // -75, 75 = yellow
+
+      const new_style = new Style({
+        stroke: new Stroke({
+          color: 'black',
+          width: 1,
+        }),
+      });
+
+      if (lat === -30 || lat === 30) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      } else if (lat === -45 || lat === 45) {
+        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
+      } else if (lat === -60 || lat === 60) {
+        new_style.setStroke(new Stroke({ color: 'blue', width: 1 }));
+      } else if (lat === -75 || lat === 75) {
+        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      }
+
+      //add style to feature
+      new_feature.setStyle(new_style);
+
+      features.push(new_feature);
     });
 
     // Create longitude lines
@@ -105,11 +133,36 @@ const MapComponent: React.FC = () => {
       for (let lat = -90; lat <= 90; lat += 1) {
         coords.push(fromLonLat([lon, lat], 'EPSG:6933'));
       }
-      features.push(
-        new Feature({
-          geometry: new LineString(coords),
-        })
-      );
+
+      //style feature according to this
+      // 0  = yellow
+      // -180, 180 = black
+      // -120, 120 = red
+      // -60, 60 = green
+
+      const new_style = new Style({
+        stroke: new Stroke({
+          color: 'black',
+          width: 1,
+        }),
+      });
+
+      if (lon === -120 || lon === 120) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      } else if (lon === -60 || lon === 60) {
+        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
+      } else if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      }
+
+      const new_feature = new Feature({
+        geometry: new LineString(coords),
+      });
+
+      //add style to feature
+      new_feature.setStyle(new_style);
+
+      features.push(new_feature);
     });
 
     return features;
@@ -181,6 +234,7 @@ const MapComponent: React.FC = () => {
             source: new OSM(),
           }),
           circleVectorLayer.current,
+          gridVectorLayer.current,
         ],
         view: new View({
           center: fromLonLat([0, 0]),
