@@ -42,7 +42,11 @@ const ProjectionLists: ProjectionType[] = [
     (Equirecantular), the Lambert Equal Area Cylindrical projection stretches lengths above and below
     the equator to keep a constant x-coordinate range vertically across the map. This projection
     vertically compressed the map in these areas to keep the area of the map constant. This can be seen
-    as the opposite of 3857, which vertically stretches to maintain the same shape.`,
+    as the opposite of 3857, which vertically stretches to maintain the same shape. However, the Lambert 
+    Standard Parallel lines are at +/- 30 degrees rather than the equator, and the coordinate range is 
+    the +/ - [cirumcfrence * cos(30)]/2 rather than the  +/- circumfrence/2. This means geometry is maintained 
+    at 30 degrees, vertically stretched between -30 and 30 degrees latitude, and vertically compressed above and below 30 degrees 
+    latitude. `,
     epsg_code: 'EPSG:6933',
     link: '/6933_reference',
     centers_lat: 0,
