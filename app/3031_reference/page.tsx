@@ -250,6 +250,13 @@ const MapComponent: React.FC = () => {
         const clickedCoordinate = event.coordinate;
         if (!clickedCoordinate) return;
 
+        const inter = toLonLat(clickedCoordinate, 'EPSG:3031');
+
+        //return if either is NaN, null, or undefined
+        if (inter[0] === null || inter[1] === null) return;
+        if (inter[0] === undefined || inter[1] === undefined) return;
+        if (isNaN(inter[0]) || isNaN(inter[1])) return;
+
         setCoordinates(clickedCoordinate);
       });
 
