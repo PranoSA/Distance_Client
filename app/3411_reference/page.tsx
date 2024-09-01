@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import 'ol/ol.css';
-import { Feature, Map, View } from 'ol';
+import { Feature, Graticule, Map, View } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import { fromLonLat, toLonLat } from 'ol/proj';
@@ -12,9 +12,37 @@ import { Coordinate } from 'ol/coordinate';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import * as turf from '@turf/turf';
-import { LineString, Polygon } from 'ol/geom';
+import { Geometry, LineString, Point, Polygon } from 'ol/geom';
+
+import proj4 from 'proj4';
+import { get as getProjection } from 'ol/proj.js';
+import { register } from 'ol/proj/proj4.js';
 import { Stroke, Style } from 'ol/style';
-import { Point } from 'proj4';
+import { Control } from 'ol/control';
+
+proj4.defs(
+  'EPSG:3411',
+  '+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+);
+
+/*// Define the Azimuthal Equal-Area Polar projection for the South Pole
+proj4.defs(
+  'EPSG:3031',
+  '+proj=laea +lat_0=-90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+);
+*/
+
+//Proj4js.defs["EPSG:3411"] = "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs";
+register(proj4);
+
+// Use the North Pole projection (EPSG:3411) or South Pole projection (EPSG:3031)
+const projPolar = getProjection('EPSG:3411'); // Change to 'EPSG:3031' for South Pole
+
+projPolar?.setExtent([-18000000, -10000000, 18000000, 16000000]);
+
+if (!projPolar) {
+  throw new Error('Projection not found');
+}
 
 const MapComponent: React.FC = () => {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -25,31 +53,6 @@ const MapComponent: React.FC = () => {
   const circleVectorLayer = useRef<VectorLayer | null>(null);
 
   const gridVectorLayer = useRef<VectorLayer<VectorSource> | null>(null);
-
-  // when circle_radius, or coordinates change, update the circle
-  useEffect(() => {
-    if (coordinates && circleVectorLayer.current) {
-      // use turf to create a circle
-      const circle = turf.circle(coordinates, circle_radius, {
-        steps: 64,
-        units: 'meters',
-      });
-
-      // convert the circle to a vector layer
-      const circleFeature = new Feature({
-        geometry: new Polygon(circle.geometry.coordinates),
-      });
-
-      if (!circleVectorLayer.current.getSource()) return;
-
-      // add the circle to the vector layer
-      //@ts-ignore
-      circleVectorLayer.current.getSource().clear();
-
-      //@ts-ignore
-      circleVectorLayer.current.getSource().addFeature(circleFeature);
-    }
-  }, [coordinates, circle_radius]);
 
   // Function to create latitude and longitude lines
   const createLatLonLines = () => {
@@ -68,7 +71,7 @@ const MapComponent: React.FC = () => {
     latitudes.forEach((lat) => {
       const coords = [];
       for (let lon = -180; lon <= 180; lon += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:4326'));
+        coords.push(fromLonLat([lon, lat], 'EPSG:3411'));
       }
       const new_feature = new Feature({
         geometry: new LineString(coords),
@@ -107,8 +110,8 @@ const MapComponent: React.FC = () => {
     // Create longitude lines
     longitudes.forEach((lon) => {
       const coords = [];
-      for (let lat = -90; lat <= 90; lat += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:4326'));
+      for (let lat = -75; lat <= 90; lat += 1) {
+        coords.push(fromLonLat([lon, lat], 'EPSG:3411'));
       }
 
       //style feature according to this
@@ -124,6 +127,14 @@ const MapComponent: React.FC = () => {
         }),
       });
 
+      if (lon === -120 || lon === 120) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      } else if (lon === -60 || lon === 60) {
+        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
+      } else if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      }
+
       const new_feature = new Feature({
         geometry: new LineString(coords),
       });
@@ -136,21 +147,105 @@ const MapComponent: React.FC = () => {
 
     return features;
   };
+
+  // when circle_radius, or coordinates change, update the circle
+  useEffect(() => {
+    if (coordinates && circleVectorLayer.current) {
+      //convert 3411 coordinate to 4326
+      const convert_3411_to_4326 = (coordinate: Coordinate): Coordinate => {
+        return toLonLat(coordinate, 'EPSG:3411');
+      };
+      // use turf to create a circle
+      const circle = turf.circle(
+        convert_3411_to_4326(coordinates),
+        circle_radius,
+        {
+          steps: 64,
+          units: 'meters',
+        }
+      );
+
+      const circle_points = circle.geometry.coordinates[0].map((coord) => {
+        return fromLonLat(coord, 'EPSG:3411');
+      });
+
+      // convert the circle to a vector layer
+      const circleFeature3411 = new Feature({
+        geometry: new Polygon([circle_points]),
+      });
+
+      if (!circleVectorLayer.current.getSource()) return;
+
+      // add the circle to the vector layer
+      //@ts-ignore
+      circleVectorLayer.current.getSource().clear();
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(circleFeature3411);
+
+      //add the center point using open layers point
+      //@ts-ignore
+      const center_point = new Feature({
+        geometry: new Point(coordinates),
+      });
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(center_point);
+    }
+  }, [coordinates, circle_radius]);
+
   useEffect(() => {
     if (mapRef.current) {
       circleVectorLayer.current = new VectorLayer({
         source: new VectorSource(),
       });
 
-      const gridLayer = new VectorLayer({
-        source: new VectorSource(),
-      });
-
       const features = createLatLonLines();
 
-      //add the features to the grid layer
+      const grid_source = new VectorSource<Feature<Geometry>>({
+        features: features,
+      });
+
+      gridVectorLayer.current = new VectorLayer({
+        source: grid_source,
+        style: new Style({
+          stroke: new Stroke({
+            color: 'red',
+            width: 1,
+          }),
+        }),
+      });
+
+      const random_line = [
+        [-74, 40],
+        [36, -28],
+      ];
+
+      const random_constant_longitude_line = [
+        [-74, 55],
+        [-74, -55],
+      ];
+
+      const ranandom_constant_latitude_line_feature = new Feature({
+        geometry: new LineString(
+          random_constant_longitude_line.map((coord) =>
+            fromLonLat(coord, 'EPSG:3411')
+          )
+        ),
+      });
+
+      const random_line_feature = new Feature({
+        geometry: new LineString(
+          random_line.map((coord) => fromLonLat(coord, 'EPSG:3411'))
+        ),
+      });
+
       //@ts-ignore
-      gridLayer.getSource().addFeatures(features);
+      gridVectorLayer.current.getSource().addFeature(random_line_feature);
+      //@ts-ignore
+      gridVectorLayer.current
+        .getSource()
+        .addFeature(ranandom_constant_latitude_line_feature);
 
       const map = new Map({
         target: mapRef.current,
@@ -159,13 +254,16 @@ const MapComponent: React.FC = () => {
             source: new OSM(),
           }),
           circleVectorLayer.current,
-          gridLayer,
+          gridVectorLayer.current,
         ],
         view: new View({
           center: fromLonLat([0, 0]),
           zoom: 2,
-          projection: 'EPSG:4326',
-          extent: [-360, -90, 360, 90],
+          //projection: 'EPSG:3411',
+          projection: 'EPSG:3411',
+          //extent: [-700000, -13000000, 70000000, 130000000],
+          //extent: [-360, -90, 360, 90],
+          //extent: [0, 0, 700000, 1300000],
         }),
       });
 
@@ -193,9 +291,14 @@ const MapComponent: React.FC = () => {
       <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
       {coordinates && (
         <div>
-          <p>Coordinates (EPSG:4326):</p>
+          <p>Coordinates (EPSG:3411):</p>
           <p>X: {coordinates[0]}</p>
           <p>Y: {coordinates[1]}</p>
+          <p> Coordinates (EPSG:4326):</p>
+          <p>
+            [{toLonLat(coordinates, 'EPSG:3411')[0].toFixed(6)},
+            {toLonLat(coordinates, 'EPSG:3411')[1].toFixed(6)}]
+          </p>
         </div>
       )}
       {
