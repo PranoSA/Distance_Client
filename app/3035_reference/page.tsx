@@ -92,6 +92,16 @@ const MapComponent: React.FC = () => {
         }),
       });
 
+      //deep red at lat === 0
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
+      //red, 1 width at 30, -30, 60, -60
+      if (lat === 30 || lat === -30 || lat === 60 || lat === -60) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
+
       /*if (lat === -30 || lat === 30) {
         new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
       } else if (lat === -45 || lat === 45) {
@@ -128,14 +138,9 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      if (lon === -120 || lon === 120) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lon === -60 || lon === 60) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      if (lon === 0 || lon === 180 || lon === -180) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
       }
-
       const new_feature = new Feature({
         geometry: new LineString(coords),
       });
@@ -227,6 +232,47 @@ const MapComponent: React.FC = () => {
           }),
         }),
       });
+
+      // add a center point (large) of lat_0=52 +lon_0=10
+      const center_point = new Feature({
+        geometry: new Point(fromLonLat([10, 52], 'EPSG:3035')),
+      });
+
+      center_point.setStyle(
+        new Style({
+          image: new CircleStyle({
+            radius: 5,
+            fill: new Fill({ color: 'black' }),
+          }),
+        })
+      );
+
+      const center_point_for_outer_ring = new Feature({
+        geometry: new Point(fromLonLat([10, 52], 'EPSG:3035')),
+      });
+
+      center_point_for_outer_ring.setStyle(
+        new Style({
+          image: new CircleStyle({
+            radius: 12,
+            stroke: new Stroke({
+              color: 'black',
+              width: 3,
+            }),
+            fill: new Fill({
+              color: 'rgba(0, 0, 0, 0)', // Transparent fill for the outer circle
+            }),
+          }),
+        })
+      );
+
+      //@ts-ignore
+      gridVectorLayer.current.getSource().addFeature(center_point);
+
+      //@ts-ignore
+      gridVectorLayer.current
+        .getSource()
+        .addFeature(center_point_for_outer_ring);
 
       const map = new Map({
         target: mapRef.current,

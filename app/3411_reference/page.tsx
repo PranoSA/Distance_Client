@@ -91,18 +91,12 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      /*if (lat === -30 || lat === 30) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lat === -45 || lat === 45) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lat === -60 || lat === 60) {
-        new_style.setStroke(new Stroke({ color: 'blue', width: 1 }));
-      } else if (lat === -75 || lat === 75) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
-      }*/
-
       //add style to feature
       new_feature.setStyle(new_style);
+
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
 
       features.push(new_feature);
     });
@@ -127,14 +121,9 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      if (lon === -120 || lon === 120) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lon === -60 || lon === 60) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      if (lon === 0 || lon === 180 || lon === -180) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
       }
-
       const new_feature = new Feature({
         geometry: new LineString(coords),
       });
@@ -215,37 +204,6 @@ const MapComponent: React.FC = () => {
           }),
         }),
       });
-
-      const random_line = [
-        [-74, 40],
-        [36, -28],
-      ];
-
-      const random_constant_longitude_line = [
-        [-74, 55],
-        [-74, -55],
-      ];
-
-      const ranandom_constant_latitude_line_feature = new Feature({
-        geometry: new LineString(
-          random_constant_longitude_line.map((coord) =>
-            fromLonLat(coord, 'EPSG:3411')
-          )
-        ),
-      });
-
-      const random_line_feature = new Feature({
-        geometry: new LineString(
-          random_line.map((coord) => fromLonLat(coord, 'EPSG:3411'))
-        ),
-      });
-
-      //@ts-ignore
-      gridVectorLayer.current.getSource().addFeature(random_line_feature);
-      //@ts-ignore
-      gridVectorLayer.current
-        .getSource()
-        .addFeature(ranandom_constant_latitude_line_feature);
 
       const map = new Map({
         target: mapRef.current,

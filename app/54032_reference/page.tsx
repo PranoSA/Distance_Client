@@ -127,6 +127,10 @@ const MapComponent: React.FC = () => {
         }),
       });
 
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
       /*if (lat === -30 || lat === 30) {
         new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
       } else if (lat === -45 || lat === 45) {
@@ -163,12 +167,12 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      if (lon === -120 || lon === 120) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lon === -60 || lon === 60) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
+      if (lon === -180 || lon === 180) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
       }
 
       const new_feature = new Feature({

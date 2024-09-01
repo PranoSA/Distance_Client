@@ -12,13 +12,14 @@ import { Coordinate } from 'ol/coordinate';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import * as turf from '@turf/turf';
-import { Geometry, LineString, Polygon } from 'ol/geom';
+import { Geometry, LineString, Point, Polygon } from 'ol/geom';
 
 import proj4 from 'proj4';
 import { get as getProjection } from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
-import { Stroke, Style } from 'ol/style';
+import { Fill, Stroke, Style } from 'ol/style';
 import { Control } from 'ol/control';
+import CircleStyle from 'ol/style/Circle';
 
 proj4.defs(
   'EPSG:27700',
@@ -118,15 +119,13 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      /*if (lat === -30 || lat === 30) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lat === -45 || lat === 45) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lat === -60 || lat === 60) {
-        new_style.setStroke(new Stroke({ color: 'blue', width: 1 }));
-      } else if (lat === -75 || lat === 75) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
-      }*/
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'yellow', width: 2 }));
+      }
+
+      if (lat === 30 || lat === -30) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
 
       //add style to feature
       new_feature.setStyle(new_style);
@@ -154,12 +153,8 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      if (lon === -120 || lon === 120) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lon === -60 || lon === 60) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'yellow', width: 2 }));
       }
 
       const new_feature = new Feature({
@@ -206,6 +201,22 @@ const MapComponent: React.FC = () => {
       // add the circle to the vector layer
       //@ts-ignore
       circleVectorLayer.current.getSource().clear();
+
+      const new_point = new Feature({
+        geometry: new Point(coordinates),
+      });
+
+      new_point.setStyle(
+        new Style({
+          image: new CircleStyle({
+            radius: 5,
+            fill: new Fill({ color: 'black' }),
+          }),
+        })
+      );
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(new_point);
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(circleFeature3035);
@@ -270,7 +281,6 @@ const MapComponent: React.FC = () => {
         if (inter[0] === null || inter[1] === null) return;
         if (inter[0] === undefined || inter[1] === undefined) return;
         if (isNaN(inter[0]) || isNaN(inter[1])) return;
-
 
         setCoordinates(clickedCoordinate);
       });

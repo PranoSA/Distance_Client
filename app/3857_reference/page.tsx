@@ -11,9 +11,11 @@ import { Select } from 'ol/interaction';
 import { Coordinate } from 'ol/coordinate';
 import VectorLayer from 'ol/layer/Vector';
 import * as turf from '@turf/turf';
-import { LineString, Polygon } from 'ol/geom';
+import { LineString, Point, Polygon } from 'ol/geom';
 import VectorSource from 'ol/source/Vector';
-import { Stroke, Style } from 'ol/style';
+import { Fill, Stroke, Style } from 'ol/style';
+import CircleStyle from 'ol/style/Circle';
+import { Point as OLPoint } from 'ol/geom';
 
 const MapComponent: React.FC = () => {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +58,24 @@ const MapComponent: React.FC = () => {
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(circleFeature);
+
+      const new_point = new OLPoint(coordinates);
+
+      const new_point_feature = new Feature({
+        geometry: new_point,
+      });
+
+      new_point_feature.setStyle(
+        new Style({
+          image: new CircleStyle({
+            radius: 5,
+            fill: new Fill({ color: 'black' }),
+          }),
+        })
+      );
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(new_point_feature);
     }
   }, [coordinates, circle_radius]);
 
@@ -96,15 +116,21 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      /*if (lat === -30 || lat === 30) {
-          new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-        } else if (lat === -45 || lat === 45) {
-          new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-        } else if (lat === -60 || lat === 60) {
-          new_style.setStroke(new Stroke({ color: 'blue', width: 1 }));
-        } else if (lat === -75 || lat === 75) {
-          new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
-        }*/
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
+      if (lat === 30 || lat === -30) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
+
+      if (lat === 45 || lat === -45) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
+
+      if (lat === 45 || lat === -45) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
 
       //add style to feature
       new_feature.setStyle(new_style);
@@ -132,12 +158,8 @@ const MapComponent: React.FC = () => {
         }),
       });
 
-      if (lon === -120 || lon === 120) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
-      } else if (lon === -60 || lon === 60) {
-        new_style.setStroke(new Stroke({ color: 'green', width: 1 }));
-      } else if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 1 }));
+      if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
       }
 
       const new_feature = new Feature({

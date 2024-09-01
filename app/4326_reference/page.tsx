@@ -12,9 +12,11 @@ import { Coordinate } from 'ol/coordinate';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import * as turf from '@turf/turf';
-import { LineString, Polygon } from 'ol/geom';
-import { Stroke, Style } from 'ol/style';
+import { Circle, LineString, Polygon } from 'ol/geom';
+import { Fill, Stroke, Style } from 'ol/style';
 import { Point } from 'proj4';
+import { Point as OLPoint } from 'ol/geom';
+import CircleStyle from 'ol/style/Circle';
 
 const MapComponent: React.FC = () => {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +50,24 @@ const MapComponent: React.FC = () => {
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(circleFeature);
+
+      const newPointF = new OLPoint(coordinates);
+
+      const newFeature = new Feature({
+        geometry: newPointF,
+      });
+
+      newFeature.setStyle(
+        new Style({
+          image: new CircleStyle({
+            radius: 5,
+            fill: new Fill({ color: 'black' }),
+          }),
+        })
+      );
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(newFeature);
     }
   }, [coordinates, circle_radius]);
 
