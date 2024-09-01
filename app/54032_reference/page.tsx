@@ -345,9 +345,9 @@ const MapComponent: React.FC = () => {
 
           <div className="w-1/3 flex flex-col">
             <p> Distance to North Pole</p>
-            <p>{distanceFromNorthPole(coordinates).toFixed(6)} meters</p>
+            <p>{distanceFromNorthPole(coordinates).toFixed(6)} km</p>
             <p> Eucledean Distance to North Pole</p>
-            <p>{eucledeanDistanceToNorthPole(coordinates).toFixed(6)} meters</p>
+            <p>{eucledeanDistanceToNorthPole(coordinates).toFixed(6)} km</p>
             <p> Ratio of Real Distance / Map Distance</p>
             <p>
               {(

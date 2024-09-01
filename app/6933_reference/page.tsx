@@ -277,10 +277,20 @@ const MapComponent: React.FC = () => {
     <div>
       <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
       {coordinates && (
-        <div>
-          <p>Coordinates (EPSG:3035):</p>
-          <p>X: {coordinates[0]}</p>
-          <p>Y: {coordinates[1]}</p>
+        <div className="w-full flex flex-row">
+          <div className="w-1/2">
+            <p>Coordinates (EPSG:3035):</p>
+            <p>X: {coordinates[0]}</p>
+            <p>Y: {coordinates[1]}</p>
+          </div>
+
+          <div className="w-1/2">
+            <p> Coordinates (ESPG:4326) </p>
+            <p>
+              [{toLonLat(coordinates, 'EPSG:6933')[0].toFixed(6)},{' '}
+              {toLonLat(coordinates, 'EPSG:6933')[1].toFixed(6)}.]
+            </p>
+          </div>
         </div>
       )}
       {
