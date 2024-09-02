@@ -13,7 +13,7 @@ import VectorLayer from 'ol/layer/Vector';
 import * as turf from '@turf/turf';
 import { LineString, Point, Polygon } from 'ol/geom';
 import VectorSource from 'ol/source/Vector';
-import { Fill, Stroke, Style } from 'ol/style';
+import { Fill, Stroke, Style, Text } from 'ol/style';
 import CircleStyle from 'ol/style/Circle';
 import { Point as OLPoint } from 'ol/geom';
 
@@ -26,6 +26,10 @@ const MapComponent: React.FC = () => {
 
   const gridLayer = useRef<VectorLayer | null>(null);
 
+  const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
+    'slider'
+  );
+
   // when circle_radius, or coordinates change, update the circle
   useEffect(() => {
     if (coordinates && circleVectorLayer.current) {
@@ -37,9 +41,28 @@ const MapComponent: React.FC = () => {
         units: 'meters',
       });
 
+      //use extents of map  extent: [-20026376.39, -20048966.1, 20026376.39, 20048966.1],
+      let left_most_point = 20026376.39;
+      let right_most_point = -20026376.39;
+      let top_most_point = -20048966.1;
+      let bottom_most_point = 20048966.1;
+
       // Convert the circle coordinates from EPSG:4326 to EPSG:3857
       const circle_3857 = circle.geometry.coordinates[0].map((coord) => {
-        return fromLonLat(coord);
+        const new_point = fromLonLat(coord);
+        if (new_point[0] < left_most_point) {
+          left_most_point = new_point[0];
+        }
+        if (new_point[0] > right_most_point) {
+          right_most_point = new_point[0];
+        }
+        if (new_point[1] < bottom_most_point) {
+          bottom_most_point = new_point[1];
+        }
+        if (new_point[1] > top_most_point) {
+          top_most_point = new_point[1];
+        }
+        return new_point;
       });
 
       // convert the circle to a vector layer
@@ -51,6 +74,8 @@ const MapComponent: React.FC = () => {
       });
 
       if (!circleVectorLayer.current.getSource()) return;
+
+      const projected_area = circleFeature.getGeometry()?.getArea() || 0;
 
       // add the circle to the vector layer
       //@ts-ignore
@@ -65,10 +90,26 @@ const MapComponent: React.FC = () => {
         geometry: new_point,
       });
 
+      const prettify = (num: number) => {
+        if (num < 1000) {
+          return num.toFixed(0) + ' m ';
+        }
+        return (num / 1000).toFixed(0) + ' km ';
+      };
+
       new_point_feature.setStyle(
         new Style({
           image: new CircleStyle({
             radius: 5,
+            fill: new Fill({ color: 'black' }),
+          }),
+          text: new Text({
+            text: `Area: ${(projected_area / 1000000).toFixed(
+              0
+            )} km^2. ${prettify(
+              right_most_point - left_most_point
+            )}hor  x ${prettify(top_most_point - bottom_most_point)} vert`,
+            offsetY: 20,
             fill: new Fill({ color: 'black' }),
           }),
         })
@@ -199,7 +240,7 @@ const MapComponent: React.FC = () => {
         view: new View({
           center: fromLonLat([0, 0]),
           zoom: 2,
-          extent: [-20026376.39 * 2, -20048966.1, 20026376.39 * 2, 20048966.1],
+          extent: [-20026376.39, -20048966.1, 20026376.39, 20048966.1],
         }),
       });
 
@@ -237,19 +278,52 @@ const MapComponent: React.FC = () => {
           </p>
         </div>
       )}
-      {
-        /* Slider to set the circle radius */
-
-        <input
-          type="range"
-          min="0"
-          max="10000000"
-          value={circle_radius}
-          onChange={(event) => {
-            set_circle_radius(parseFloat(event.target.value));
-          }}
-        />
-      }
+      <div className="w-full p-5 flex flex-wrap">
+        {/* Toggle To Set Whether slider or input */}
+        <div className="w-full flex flex-row items-center space-x-4">
+          <label className="text-gray-700">Slider</label>
+          <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+            <input
+              type="checkbox"
+              name="toggle"
+              id="toggle"
+              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+              checked={sliderOrInput === 'input'}
+              onChange={() => {
+                setSliderOrInput(
+                  sliderOrInput === 'slider' ? 'input' : 'slider'
+                );
+              }}
+            />
+            <label
+              htmlFor="toggle"
+              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+            ></label>
+          </div>
+          <label className="text-gray-700">Input</label>
+        </div>
+        {sliderOrInput === 'input' ? (
+          <input
+            type="number"
+            value={circle_radius}
+            onChange={(event) => {
+              set_circle_radius(parseFloat(event.target.value));
+            }}
+          />
+        ) : null}
+        {sliderOrInput === 'slider' ? (
+          /* Slider to set the circle radius */
+          <input
+            type="range"
+            min="0"
+            max="10000000"
+            value={circle_radius}
+            onChange={(event) => {
+              set_circle_radius(parseFloat(event.target.value) || 0);
+            }}
+          />
+        ) : null}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <p>Circle Radius: {circle_radius} meters</p>
       </div>

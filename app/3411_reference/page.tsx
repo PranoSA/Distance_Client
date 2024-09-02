@@ -17,7 +17,7 @@ import { Geometry, LineString, Point, Polygon } from 'ol/geom';
 import proj4 from 'proj4';
 import { get as getProjection } from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
-import { Stroke, Style } from 'ol/style';
+import { Fill, Stroke, Style, Text } from 'ol/style';
 import { Control } from 'ol/control';
 
 proj4.defs(
@@ -163,11 +163,108 @@ const MapComponent: React.FC = () => {
         geometry: new Polygon([circle_points]),
       });
 
+      const projectedArea = circleFeature3411.getGeometry()?.getArea() || 0;
+
+      const coordinate_bottom = turf.destination(
+        convert_3411_to_4326(coordinates),
+        circle_radius,
+        180,
+        { units: 'meters' }
+      );
+
+      const coordinate_top = turf.destination(
+        convert_3411_to_4326(coordinates),
+        circle_radius,
+        0,
+        { units: 'meters' }
+      );
+
+      //convert turf bottom to point
+      const bottom_point = fromLonLat(
+        coordinate_bottom.geometry.coordinates,
+        'EPSG:3411'
+      );
+      const top_point = fromLonLat(
+        coordinate_top.geometry.coordinates,
+        'EPSG:3411'
+      );
+
+      const euclidean_distance = Math.sqrt(
+        Math.pow(top_point[0] - bottom_point[0], 2) +
+          Math.pow(top_point[1] - bottom_point[1], 2)
+      );
+
+      //draw a line from top to bottom
+      const line = new Feature({
+        geometry: new LineString([top_point, bottom_point]),
+      });
+
+      const prettifyMeasurement = (measurement: number) => {
+        if (measurement < 1000) {
+          return `${measurement.toFixed(0)} meters`;
+        }
+
+        return `${(measurement / 1000).toFixed(0)} km`;
+      };
+
+      const degrees_lat = toLonLat(coordinates, 'EPSG:3411')[1];
+
+      console.log('degrees_lat', degrees_lat);
+
+      const circumfrence_at_lat =
+        2 * Math.PI * 6371000 * Math.cos(degrees_lat * (Math.PI / 180));
+
+      //
+      const projected_radius = Math.sqrt(
+        coordinates[0] * coordinates[0] + coordinates[1] * coordinates[1]
+      );
+
+      //conver to +/- degrees
+      const proportion_of_circumfrence = circle_radius / circumfrence_at_lat;
+
+      const arc_length_through_center =
+        proportion_of_circumfrence * projected_radius * 2 * Math.PI;
+
+      //add styling with descriptive text on area and euclidean distance
+      line.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'black',
+            width: 1,
+          }),
+          text: new Text({
+            text: `
+          ${prettifyMeasurement(arc_length_through_center * 2)} hor..
+            ${prettifyMeasurement(euclidean_distance)} vert.. Area ${(
+              projectedArea / 1000000
+            ).toFixed(0)} km sq. `,
+            font: '12px Calibri,sans-serif',
+            fill: new Fill({
+              color: 'black',
+            }),
+            stroke: new Stroke({
+              color: 'white',
+              width: 3,
+            }),
+            offsetY: -10, // Adjust the label position
+          }),
+        })
+      );
+
+      //get the height of the circle, which you can assume is in straight line
+
+      //stop trying to use turf, this is actual distance. I want to use the projected difference on the map
+
+      //eucledioan distance top and bottom
+
       if (!circleVectorLayer.current.getSource()) return;
 
       // add the circle to the vector layer
       //@ts-ignore
       circleVectorLayer.current.getSource().clear();
+
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(line);
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(circleFeature3411);

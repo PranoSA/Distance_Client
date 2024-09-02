@@ -17,7 +17,7 @@ import { Geometry, LineString, Point, Polygon } from 'ol/geom';
 import proj4 from 'proj4';
 import { get as getProjection } from 'ol/proj.js';
 import { register } from 'ol/proj/proj4.js';
-import { Fill, Stroke, Style } from 'ol/style';
+import { Fill, Stroke, Style, Text } from 'ol/style';
 import { Control } from 'ol/control';
 import CircleStyle from 'ol/style/Circle';
 
@@ -48,6 +48,17 @@ const MapComponent: React.FC = () => {
   const circleVectorLayer = useRef<VectorLayer | null>(null);
 
   const gridVectorLayer = useRef<VectorLayer<VectorSource> | null>(null);
+
+  const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
+    'slider'
+  );
+
+  const [verticalCircleProjectedDistance, setVerticalCircleProjectedDistance] =
+    useState<number>(0.0);
+  const [
+    horizontalCircleProjectedDistance,
+    setHorizontalCircleProjectedDistance,
+  ] = useState<number>(0.0);
 
   const distanceFromNorthPole = (coordinate: Coordinate): number => {
     //convert 54032 coordinate to 4326
@@ -191,6 +202,13 @@ const MapComponent: React.FC = () => {
   // when circle_radius, or coordinates change, update the circle
   useEffect(() => {
     if (coordinates && circleVectorLayer.current) {
+      //return if Nan, null, or undefined
+      if (isNaN(circle_radius)) return;
+      //for coordinates
+      if (coordinates[0] === null || coordinates[1] === null) return;
+      if (coordinates[0] === undefined || coordinates[1] === undefined) return;
+      if (isNaN(coordinates[0]) || isNaN(coordinates[1])) return;
+
       //convert 54032 coordinate to 4326
       const convert_54032_to_4326 = (coordinate: Coordinate): Coordinate => {
         return toLonLat(coordinate, 'EPSG:54032');
@@ -214,6 +232,9 @@ const MapComponent: React.FC = () => {
         geometry: new Polygon([circle_points]),
       });
 
+      //@
+      const projectedArea = circleFeature54032.getGeometry()?.getArea() || 0;
+
       if (!circleVectorLayer.current.getSource()) return;
 
       // add the circle to the vector layer
@@ -229,6 +250,171 @@ const MapComponent: React.FC = () => {
       const center_point = new Feature({
         geometry: new Point(coordinates),
       });
+
+      /// add line from bottom of circle to top of circleFeature54032
+
+      //get the center coordinate in 4326
+      const center_coord_4326 = toLonLat(coordinates, 'EPSG:54032');
+
+      //it will be constant longitude, so add the meters in the direction of positive latitude
+      const bearing = 0;
+
+      const distance = circle_radius;
+
+      const destination = turf.destination(
+        turf.point(center_coord_4326),
+        distance,
+        bearing,
+        {
+          units: 'meters',
+        }
+      );
+
+      const bearing_south = 180; //south pole, to get bottom of circle
+      const destination_south = turf.destination(
+        turf.point(center_coord_4326),
+        distance,
+        bearing_south,
+        {
+          units: 'meters',
+        }
+      );
+
+      //draw a line from the top to the bottom
+      const line = new Feature({
+        geometry: new LineString([
+          fromLonLat(destination_south.geometry.coordinates, 'EPSG:54032'),
+          fromLonLat(destination.geometry.coordinates, 'EPSG:54032'),
+        ]),
+      });
+
+      const verticalProjectedDistance = Math.sqrt(
+        Math.pow(
+          destination.geometry.coordinates[0] -
+            destination_south.geometry.coordinates[0],
+          2
+        ) +
+          Math.pow(
+            destination.geometry.coordinates[1] -
+              destination_south.geometry.coordinates[1],
+            2
+          )
+      );
+
+      setVerticalCircleProjectedDistance(verticalProjectedDistance);
+
+      // to get horizontal projected difference,
+      // find the circumfrence of the arc at that center latitude
+      // multiply by the span of the circle
+
+      //get the radius of the projection at that latitude, which is  euqal to the eucledian distance fomr the pole
+
+      const lat_rad = (center_coord_4326[1] * Math.PI) / 180;
+
+      const earth_circumfrence_at_lat =
+        2 * Math.PI * 6371000 * Math.cos(lat_rad);
+
+      const distance_ratio = circle_radius / earth_circumfrence_at_lat;
+
+      const plus_minus_angle_degrees = distance_ratio * 360; //% of total circumfrence
+
+      const point_1 = [
+        center_coord_4326[0] - plus_minus_angle_degrees,
+        center_coord_4326[1],
+      ];
+
+      const point_2 = [
+        center_coord_4326[0] + plus_minus_angle_degrees,
+        center_coord_4326[1],
+      ];
+
+      // get t
+      const radius_at_center = Math.sqrt(
+        coordinates[0] * coordinates[0] + coordinates[1] * coordinates[1]
+      );
+
+      //multiply by 2* pi * radius
+      const horizontalProjectedDistance = 2 * Math.PI * radius_at_center;
+
+      const lat_diff_radians = plus_minus_angle_degrees * (Math.PI / 180) * 2;
+
+      // get the horizontal projected distance
+      const horizontalProjectedDistance2 =
+        (horizontalProjectedDistance * lat_diff_radians) / (2 * Math.PI);
+
+      setHorizontalCircleProjectedDistance(horizontalProjectedDistance2);
+
+      //draw from left to right
+      const line2 = new Feature({
+        geometry: new LineString([
+          // from left to center, and then from center to right
+          fromLonLat([point_1[0], point_1[1]], 'EPSG:54032'),
+          fromLonLat(center_coord_4326, 'EPSG:54032'),
+          fromLonLat([point_2[0], point_2[1]], 'EPSG:54032'),
+        ]),
+      });
+
+      const prettifyMeasurement = (distance: number): string => {
+        if (distance < 1000) {
+          return `${distance.toFixed(0)} meters`;
+        } else {
+          return `${(distance / 1000).toFixed(2)} km`;
+        }
+      };
+
+      // Set the style for the line with a label
+      line2.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'black',
+            width: 2,
+          }),
+          text: new Text({
+            text: `${prettifyMeasurement(
+              horizontalProjectedDistance2
+            )}x ${prettifyMeasurement(2 * circle_radius)} meters. Area ${(
+              projectedArea / 1000000
+            ).toFixed(0)} km sq. `,
+            font: '12px Calibri,sans-serif',
+            fill: new Fill({
+              color: 'black',
+            }),
+            stroke: new Stroke({
+              color: 'white',
+              width: 3,
+            }),
+            offsetY: -10, // Adjust the label position
+          }),
+        })
+      );
+
+      //add line to the vector layer
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(line2);
+
+      line.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: 'black',
+            width: 2,
+          }),
+          text: new Text({
+            text: `${verticalProjectedDistance.toFixed(0)} meters`,
+            font: '12px Calibri,sans-serif',
+            fill: new Fill({
+              color: 'black',
+            }),
+            stroke: new Stroke({
+              color: 'white',
+              width: 3,
+            }),
+            offsetY: -10, // Adjust the label position
+          }),
+        })
+      );
+      //add line to the vector layer
+      //@ts-ignore
+      circleVectorLayer.current.getSource().addFeature(line);
 
       //style solid
       center_point.setStyle(
@@ -369,8 +555,41 @@ const MapComponent: React.FC = () => {
           </div>
         </div>
       )}
-      <div>
-        {
+      <div className="w-full p-5 flex flex-wrap">
+        {/* Toggle To Set Whether slider or input */}
+        <div className="w-full flex flex-row items-center space-x-4">
+          <label className="text-gray-700">Slider</label>
+          <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+            <input
+              type="checkbox"
+              name="toggle"
+              id="toggle"
+              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+              checked={sliderOrInput === 'input'}
+              value={sliderOrInput}
+              onChange={() => {
+                setSliderOrInput(
+                  sliderOrInput === 'slider' ? 'input' : 'slider'
+                );
+              }}
+            />
+            <label
+              htmlFor="toggle"
+              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+            ></label>
+          </div>
+          <label className="text-gray-700">Input</label>
+        </div>
+        {sliderOrInput === 'input' ? (
+          <input
+            type="number"
+            value={circle_radius}
+            onChange={(event) => {
+              set_circle_radius(parseFloat(event.target.value));
+            }}
+          />
+        ) : null}
+        {sliderOrInput === 'slider' ? (
           /* Slider to set the circle radius */
           <input
             type="range"
@@ -378,10 +597,10 @@ const MapComponent: React.FC = () => {
             max="10000000"
             value={circle_radius}
             onChange={(event) => {
-              set_circle_radius(parseFloat(event.target.value));
+              set_circle_radius(parseFloat(event.target.value) || 0);
             }}
           />
-        }
+        ) : null}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <p>Circle Radius: {circle_radius} meters</p>
