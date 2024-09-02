@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import 'ol/ol.css';
-import { Feature, Map, View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
-import { fromLonLat, toLonLat } from 'ol/proj';
-import { click } from 'ol/events/condition';
-import { Select } from 'ol/interaction';
-import { Coordinate } from 'ol/coordinate';
-import VectorLayer from 'ol/layer/Vector';
-import * as turf from '@turf/turf';
-import { LineString, Point, Polygon } from 'ol/geom';
-import VectorSource from 'ol/source/Vector';
-import { Fill, Stroke, Style, Text } from 'ol/style';
-import CircleStyle from 'ol/style/Circle';
-import { Point as OLPoint } from 'ol/geom';
+import React, { useEffect, useRef, useState } from "react";
+import "ol/ol.css";
+import { Feature, Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import OSM from "ol/source/OSM";
+import { fromLonLat, toLonLat } from "ol/proj";
+import { click } from "ol/events/condition";
+import { Select } from "ol/interaction";
+import { Coordinate } from "ol/coordinate";
+import VectorLayer from "ol/layer/Vector";
+import * as turf from "@turf/turf";
+import { LineString, Point, Polygon } from "ol/geom";
+import VectorSource from "ol/source/Vector";
+import { Fill, Stroke, Style, Text } from "ol/style";
+import CircleStyle from "ol/style/Circle";
+import { Point as OLPoint } from "ol/geom";
 
 const MapComponent: React.FC = () => {
   const mapRef = useRef<HTMLDivElement | null>(null);
@@ -26,8 +26,8 @@ const MapComponent: React.FC = () => {
 
   const gridLayer = useRef<VectorLayer | null>(null);
 
-  const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
-    'slider'
+  const [sliderOrInput, setSliderOrInput] = useState<"slider" | "input">(
+    "slider"
   );
 
   // when circle_radius, or coordinates change, update the circle
@@ -38,7 +38,7 @@ const MapComponent: React.FC = () => {
 
       const circle = turf.circle(coordinate_4326, circle_radius, {
         steps: 64,
-        units: 'meters',
+        units: "meters",
       });
 
       //use extents of map  extent: [-20026376.39, -20048966.1, 20026376.39, 20048966.1],
@@ -92,25 +92,27 @@ const MapComponent: React.FC = () => {
 
       const prettify = (num: number) => {
         if (num < 1000) {
-          return num.toFixed(0) + ' m ';
+          return num.toFixed(0) + " m ";
         }
-        return (num / 1000).toFixed(0) + ' km ';
+        return (num / 1000).toFixed(0) + " km ";
       };
 
       new_point_feature.setStyle(
         new Style({
           image: new CircleStyle({
             radius: 5,
-            fill: new Fill({ color: 'black' }),
+            fill: new Fill({ color: "black" }),
           }),
           text: new Text({
-            text: `Area: ${(projected_area / 1000000).toFixed(
-              0
-            )} km^2. ${prettify(
+            font: "12px Calibri,sans-serif",
+            text: `Area Ratio: ${(
+              projected_area /
+              (Math.PI * circle_radius * circle_radius)
+            ).toFixed(2)} ${"\n"} ${prettify(
               right_most_point - left_most_point
-            )}hor  x ${prettify(top_most_point - bottom_most_point)} vert`,
+            )} X ${prettify(top_most_point - bottom_most_point)}`,
             offsetY: 20,
-            fill: new Fill({ color: 'black' }),
+            fill: new Fill({ color: "black" }),
           }),
         })
       );
@@ -137,7 +139,7 @@ const MapComponent: React.FC = () => {
     latitudes.forEach((lat) => {
       const coords = [];
       for (let lon = -180; lon <= 180; lon += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:3857'));
+        coords.push(fromLonLat([lon, lat], "EPSG:3857"));
       }
       const new_feature = new Feature({
         geometry: new LineString(coords),
@@ -152,25 +154,25 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
 
       if (lat === 0) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 2 }));
       }
 
       if (lat === 30 || lat === -30) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 1 }));
       }
 
       if (lat === 45 || lat === -45) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 1 }));
       }
 
       if (lat === 45 || lat === -45) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 1 }));
       }
 
       //add style to feature
@@ -183,7 +185,7 @@ const MapComponent: React.FC = () => {
     longitudes.forEach((lon) => {
       const coords = [];
       for (let lat = -90; lat <= 90; lat += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:3857'));
+        coords.push(fromLonLat([lon, lat], "EPSG:3857"));
       }
 
       //style feature according to this
@@ -194,13 +196,13 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
 
       if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 2 }));
       }
 
       const new_feature = new Feature({
@@ -250,7 +252,7 @@ const MapComponent: React.FC = () => {
 
       map.addInteraction(selectClick);
 
-      map.on('click', (event) => {
+      map.on("click", (event) => {
         const clickedCoordinate = event.coordinate;
         if (!clickedCoordinate) return;
 
@@ -258,14 +260,14 @@ const MapComponent: React.FC = () => {
       });
 
       return () => {
-        map.setTarget('');
+        map.setTarget("");
       };
     }
   }, []);
 
   return (
     <div>
-      <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
+      <div ref={mapRef} style={{ width: "100%", height: "400px" }}></div>
       {coordinates && (
         <div>
           <p>Coordinates (EPSG:3857):</p>
@@ -288,10 +290,10 @@ const MapComponent: React.FC = () => {
               name="toggle"
               id="toggle"
               className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-              checked={sliderOrInput === 'input'}
+              checked={sliderOrInput === "input"}
               onChange={() => {
                 setSliderOrInput(
-                  sliderOrInput === 'slider' ? 'input' : 'slider'
+                  sliderOrInput === "slider" ? "input" : "slider"
                 );
               }}
             />
@@ -302,7 +304,7 @@ const MapComponent: React.FC = () => {
           </div>
           <label className="text-gray-700">Input</label>
         </div>
-        {sliderOrInput === 'input' ? (
+        {sliderOrInput === "input" ? (
           <input
             type="number"
             value={circle_radius}
@@ -311,7 +313,7 @@ const MapComponent: React.FC = () => {
             }}
           />
         ) : null}
-        {sliderOrInput === 'slider' ? (
+        {sliderOrInput === "slider" ? (
           /* Slider to set the circle radius */
           <input
             type="range"
@@ -324,8 +326,19 @@ const MapComponent: React.FC = () => {
           />
         ) : null}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <p>Circle Radius: {circle_radius} meters</p>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <p>
+          Circle Radius:{" "}
+          {circle_radius > 1000
+            ? `${circle_radius / 1000} km`
+            : `${circle_radius} meters`}{" "}
+        </p>
+        <p>
+          Circle Radius:{" "}
+          {circle_radius * 2 > 1000
+            ? `${(circle_radius * 2) / 1000} km`
+            : `${circle_radius} meters`}{" "}
+        </p>
       </div>
     </div>
   );

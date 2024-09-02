@@ -1,75 +1,75 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import 'ol/ol.css';
-import { Feature, Graticule, Map, View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
-import { fromLonLat, toLonLat } from 'ol/proj';
-import { click } from 'ol/events/condition';
-import { Select } from 'ol/interaction';
-import { Coordinate } from 'ol/coordinate';
-import VectorLayer from 'ol/layer/Vector';
-import VectorSource from 'ol/source/Vector';
-import * as turf from '@turf/turf';
-import { Geometry, LineString, Point, Polygon } from 'ol/geom';
+import React, { useEffect, useRef, useState } from "react";
+import "ol/ol.css";
+import { Feature, Graticule, Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import OSM from "ol/source/OSM";
+import { fromLonLat, toLonLat } from "ol/proj";
+import { click } from "ol/events/condition";
+import { Select } from "ol/interaction";
+import { Coordinate } from "ol/coordinate";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
+import * as turf from "@turf/turf";
+import { Geometry, LineString, Point, Polygon } from "ol/geom";
 
-import proj4 from 'proj4';
-import { get as getProjection } from 'ol/proj.js';
-import { register } from 'ol/proj/proj4.js';
-import { Fill, Stroke, Style, Text } from 'ol/style';
-import { Control } from 'ol/control';
-import CircleStyle from 'ol/style/Circle';
+import proj4 from "proj4";
+import { get as getProjection } from "ol/proj.js";
+import { register } from "ol/proj/proj4.js";
+import { Fill, Stroke, Style, Text } from "ol/style";
+import { Control } from "ol/control";
+import CircleStyle from "ol/style/Circle";
 
 proj4.defs(
-  'EPSG:27700',
-  '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 ' +
-    '+x_0=400000 +y_0=-100000 +ellps=airy ' +
-    '+towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 ' +
-    '+units=m +no_defs'
+  "EPSG:27700",
+  "+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 " +
+    "+x_0=400000 +y_0=-100000 +ellps=airy " +
+    "+towgs84=446.448,-125.157,542.06,0.15,0.247,0.842,-20.489 " +
+    "+units=m +no_defs"
 );
 
 proj4.defs(
-  'EPSG:3035',
-  '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs'
+  "EPSG:3035",
+  "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs"
 );
 
 //now, 9834
 proj4.defs(
-  'EPSG:9834',
-  '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs'
+  "EPSG:9834",
+  "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs"
 );
 
 //6933
 proj4.defs(
-  'EPSG:6933',
-  '+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+  "EPSG:6933",
+  "+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 );
 
 //Proj4js.defs["EPSG:3035"] = "+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs";
 register(proj4);
-const proj27700 = getProjection('EPSG:27700');
+const proj27700 = getProjection("EPSG:27700");
 if (!proj27700) {
-  throw new Error('Projection not found');
+  throw new Error("Projection not found");
 }
 proj27700.setExtent([0, 0, 700000, 1300000]);
-const proj9834 = getProjection('EPSG:9834');
+const proj9834 = getProjection("EPSG:9834");
 if (!proj9834) {
-  throw new Error('Projection not found');
+  throw new Error("Projection not found");
 }
 proj9834.setExtent([-20037508.34, -20037508.34, 20037508.34, 20037508.34]);
 
-const proj6933 = getProjection('EPSG:6933');
+const proj6933 = getProjection("EPSG:6933");
 if (!proj6933) {
-  throw new Error('Projection not found');
+  throw new Error("Projection not found");
 }
 
 proj6933.setExtent([-17367530.45, -7314540.66, 17367530.45, 7314540.66]);
 
-const proj3035 = getProjection('EPSG:3035');
+const proj3035 = getProjection("EPSG:3035");
 
 if (!proj3035) {
-  throw new Error('Projection not found');
+  throw new Error("Projection not found");
 }
 
 const MapComponent: React.FC = () => {
@@ -82,8 +82,8 @@ const MapComponent: React.FC = () => {
 
   const gridVectorLayer = useRef<VectorLayer<VectorSource> | null>(null);
 
-  const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
-    'slider'
+  const [sliderOrInput, setSliderOrInput] = useState<"slider" | "input">(
+    "slider"
   );
 
   // Function to create latitude and longitude lines
@@ -103,7 +103,7 @@ const MapComponent: React.FC = () => {
     latitudes.forEach((lat) => {
       const coords = [];
       for (let lon = -180; lon <= 180; lon += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:6933'));
+        coords.push(fromLonLat([lon, lat], "EPSG:6933"));
       }
       const new_feature = new Feature({
         geometry: new LineString(coords),
@@ -118,17 +118,17 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
 
       if (lat === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "yellow", width: 2 }));
       }
 
       if (lat === 30 || lat === -30) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 2 }));
       }
 
       //add style to feature
@@ -141,7 +141,7 @@ const MapComponent: React.FC = () => {
     longitudes.forEach((lon) => {
       const coords = [];
       for (let lat = -90; lat <= 90; lat += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:6933'));
+        coords.push(fromLonLat([lon, lat], "EPSG:6933"));
       }
 
       //style feature according to this
@@ -152,13 +152,13 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
 
       if (lon === 0) {
-        new_style.setStroke(new Stroke({ color: 'yellow', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "yellow", width: 2 }));
       }
 
       const new_feature = new Feature({
@@ -179,7 +179,7 @@ const MapComponent: React.FC = () => {
     if (coordinates && circleVectorLayer.current) {
       //convert 3035 coordinate to 4326
       const convert_3035_to_4326 = (coordinate: Coordinate): Coordinate => {
-        return toLonLat(coordinate, 'EPSG:6933');
+        return toLonLat(coordinate, "EPSG:6933");
       };
       // use turf to create a circle
       const circle = turf.circle(
@@ -187,7 +187,7 @@ const MapComponent: React.FC = () => {
         circle_radius,
         {
           steps: 64,
-          units: 'meters',
+          units: "meters",
         }
       );
 
@@ -199,7 +199,7 @@ const MapComponent: React.FC = () => {
       var left_most_coordinate = 17367530.45;
 
       const circle_points = circle.geometry.coordinates[0].map((coord) => {
-        const new_point = fromLonLat(coord, 'EPSG:6933');
+        const new_point = fromLonLat(coord, "EPSG:6933");
         if (new_point[0] > right_most_coordinate) {
           right_most_coordinate = new_point[0];
         }
@@ -237,25 +237,29 @@ const MapComponent: React.FC = () => {
 
       const prettify = (num: number) => {
         if (num < 1000) {
-          return num.toFixed(0) + 'm ';
+          return num.toFixed(0) + "m ";
         }
-        return (num / 1000).toFixed(0) + 'km ';
+        return (num / 1000).toFixed(0) + "km ";
       };
 
       new_point.setStyle(
         new Style({
           image: new CircleStyle({
             radius: 5,
-            fill: new Fill({ color: 'black' }),
+            fill: new Fill({ color: "black" }),
           }),
           text: new Text({
+            font: "12px Calibri,sans-serif",
             text: `${prettify(
               right_most_coordinate - left_most_coordinate
-            )}hor. ${' '} ${prettify(
+            )} ${" "} X ${prettify(
               top_most_coordiante - bottom_most_coordinate
-            )} vert. Area ${Math.round(projected_area / 1000000)} km^2`,
+            )} ${"\n"} Area Ratio : ${(
+              projected_area /
+              (Math.PI * circle_radius * circle_radius)
+            ).toFixed(2)}`,
             offsetY: -15,
-            fill: new Fill({ color: 'black' }),
+            fill: new Fill({ color: "black" }),
           }),
         })
       );
@@ -284,7 +288,7 @@ const MapComponent: React.FC = () => {
         source: grid_source,
         style: new Style({
           stroke: new Stroke({
-            color: 'red',
+            color: "red",
             width: 1,
           }),
         }),
@@ -303,7 +307,7 @@ const MapComponent: React.FC = () => {
           center: fromLonLat([0, 0]),
           zoom: 2,
           //projection: 'EPSG:3035',
-          projection: 'EPSG:6933',
+          projection: "EPSG:6933",
           //extent: [-700000, -13000000, 70000000, 130000000],
           //extent: [-360, -90, 360, 90],
           //extent: [0, 0, 700000, 1300000],
@@ -316,11 +320,11 @@ const MapComponent: React.FC = () => {
 
       map.addInteraction(selectClick);
 
-      map.on('click', (event) => {
+      map.on("click", (event) => {
         const clickedCoordinate = event.coordinate;
         if (!clickedCoordinate) return;
 
-        const inter = toLonLat(clickedCoordinate, 'EPSG:6933');
+        const inter = toLonLat(clickedCoordinate, "EPSG:6933");
 
         //return if either is NaN, null, or undefined
         if (inter[0] === null || inter[1] === null) return;
@@ -331,14 +335,14 @@ const MapComponent: React.FC = () => {
       });
 
       return () => {
-        map.setTarget('');
+        map.setTarget("");
       };
     }
   }, []);
 
   return (
     <div>
-      <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
+      <div ref={mapRef} style={{ width: "100%", height: "400px" }}></div>
       {coordinates && (
         <div className="w-full flex flex-row">
           <div className="w-1/2">
@@ -350,8 +354,8 @@ const MapComponent: React.FC = () => {
           <div className="w-1/2">
             <p> Coordinates (ESPG:4326) </p>
             <p>
-              [{toLonLat(coordinates, 'EPSG:6933')[0].toFixed(6)},{' '}
-              {toLonLat(coordinates, 'EPSG:6933')[1].toFixed(6)}.]
+              [{toLonLat(coordinates, "EPSG:6933")[0].toFixed(6)},{" "}
+              {toLonLat(coordinates, "EPSG:6933")[1].toFixed(6)}.]
             </p>
           </div>
         </div>
@@ -366,10 +370,10 @@ const MapComponent: React.FC = () => {
               name="toggle"
               id="toggle"
               className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-              checked={sliderOrInput === 'input'}
+              checked={sliderOrInput === "input"}
               onChange={() => {
                 setSliderOrInput(
-                  sliderOrInput === 'slider' ? 'input' : 'slider'
+                  sliderOrInput === "slider" ? "input" : "slider"
                 );
               }}
             />
@@ -380,7 +384,7 @@ const MapComponent: React.FC = () => {
           </div>
           <label className="text-gray-700">Input</label>
         </div>
-        {sliderOrInput === 'input' ? (
+        {sliderOrInput === "input" ? (
           <input
             type="number"
             value={circle_radius}
@@ -389,7 +393,7 @@ const MapComponent: React.FC = () => {
             }}
           />
         ) : null}
-        {sliderOrInput === 'slider' ? (
+        {sliderOrInput === "slider" ? (
           /* Slider to set the circle radius */
           <input
             type="range"
@@ -402,7 +406,7 @@ const MapComponent: React.FC = () => {
           />
         ) : null}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <p>Circle Radius: {circle_radius} meters</p>
       </div>
     </div>

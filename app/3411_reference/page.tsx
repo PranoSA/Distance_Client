@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import 'ol/ol.css';
-import { Feature, Graticule, Map, View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
-import { fromLonLat, toLonLat } from 'ol/proj';
-import { click } from 'ol/events/condition';
-import { Select } from 'ol/interaction';
-import { Coordinate } from 'ol/coordinate';
-import VectorLayer from 'ol/layer/Vector';
-import VectorSource from 'ol/source/Vector';
-import * as turf from '@turf/turf';
-import { Geometry, LineString, Point, Polygon } from 'ol/geom';
+import React, { useEffect, useRef, useState } from "react";
+import "ol/ol.css";
+import { Feature, Graticule, Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import OSM from "ol/source/OSM";
+import { fromLonLat, toLonLat } from "ol/proj";
+import { click } from "ol/events/condition";
+import { Select } from "ol/interaction";
+import { Coordinate } from "ol/coordinate";
+import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
+import * as turf from "@turf/turf";
+import { Geometry, LineString, Point, Polygon } from "ol/geom";
 
-import proj4 from 'proj4';
-import { get as getProjection } from 'ol/proj.js';
-import { register } from 'ol/proj/proj4.js';
-import { Fill, Stroke, Style, Text } from 'ol/style';
-import { Control } from 'ol/control';
+import proj4 from "proj4";
+import { get as getProjection } from "ol/proj.js";
+import { register } from "ol/proj/proj4.js";
+import { Fill, Stroke, Style, Text } from "ol/style";
+import { Control } from "ol/control";
 
 proj4.defs(
-  'EPSG:3411',
-  '+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'
+  "EPSG:3411",
+  "+proj=laea +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
 );
 
 /*// Define the Azimuthal Equal-Area Polar projection for the South Pole
@@ -36,12 +36,12 @@ proj4.defs(
 register(proj4);
 
 // Use the North Pole projection (EPSG:3411) or South Pole projection (EPSG:3031)
-const projPolar = getProjection('EPSG:3411'); // Change to 'EPSG:3031' for South Pole
+const projPolar = getProjection("EPSG:3411"); // Change to 'EPSG:3031' for South Pole
 
 projPolar?.setExtent([-18000000, -10000000, 18000000, 16000000]);
 
 if (!projPolar) {
-  throw new Error('Projection not found');
+  throw new Error("Projection not found");
 }
 
 const MapComponent: React.FC = () => {
@@ -71,7 +71,7 @@ const MapComponent: React.FC = () => {
     latitudes.forEach((lat) => {
       const coords = [];
       for (let lon = -180; lon <= 180; lon += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:3411'));
+        coords.push(fromLonLat([lon, lat], "EPSG:3411"));
       }
       const new_feature = new Feature({
         geometry: new LineString(coords),
@@ -86,7 +86,7 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
@@ -95,7 +95,7 @@ const MapComponent: React.FC = () => {
       new_feature.setStyle(new_style);
 
       if (lat === 0) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 2 }));
       }
 
       features.push(new_feature);
@@ -105,7 +105,7 @@ const MapComponent: React.FC = () => {
     longitudes.forEach((lon) => {
       const coords = [];
       for (let lat = -75; lat <= 90; lat += 1) {
-        coords.push(fromLonLat([lon, lat], 'EPSG:3411'));
+        coords.push(fromLonLat([lon, lat], "EPSG:3411"));
       }
 
       //style feature according to this
@@ -116,13 +116,13 @@ const MapComponent: React.FC = () => {
 
       const new_style = new Style({
         stroke: new Stroke({
-          color: 'black',
+          color: "black",
           width: 1,
         }),
       });
 
       if (lon === 0 || lon === 180 || lon === -180) {
-        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+        new_style.setStroke(new Stroke({ color: "red", width: 2 }));
       }
       const new_feature = new Feature({
         geometry: new LineString(coords),
@@ -142,7 +142,7 @@ const MapComponent: React.FC = () => {
     if (coordinates && circleVectorLayer.current) {
       //convert 3411 coordinate to 4326
       const convert_3411_to_4326 = (coordinate: Coordinate): Coordinate => {
-        return toLonLat(coordinate, 'EPSG:3411');
+        return toLonLat(coordinate, "EPSG:3411");
       };
       // use turf to create a circle
       const circle = turf.circle(
@@ -150,12 +150,12 @@ const MapComponent: React.FC = () => {
         circle_radius,
         {
           steps: 64,
-          units: 'meters',
+          units: "meters",
         }
       );
 
       const circle_points = circle.geometry.coordinates[0].map((coord) => {
-        return fromLonLat(coord, 'EPSG:3411');
+        return fromLonLat(coord, "EPSG:3411");
       });
 
       // convert the circle to a vector layer
@@ -169,24 +169,24 @@ const MapComponent: React.FC = () => {
         convert_3411_to_4326(coordinates),
         circle_radius,
         180,
-        { units: 'meters' }
+        { units: "meters" }
       );
 
       const coordinate_top = turf.destination(
         convert_3411_to_4326(coordinates),
         circle_radius,
         0,
-        { units: 'meters' }
+        { units: "meters" }
       );
 
       //convert turf bottom to point
       const bottom_point = fromLonLat(
         coordinate_bottom.geometry.coordinates,
-        'EPSG:3411'
+        "EPSG:3411"
       );
       const top_point = fromLonLat(
         coordinate_top.geometry.coordinates,
-        'EPSG:3411'
+        "EPSG:3411"
       );
 
       const euclidean_distance = Math.sqrt(
@@ -207,9 +207,9 @@ const MapComponent: React.FC = () => {
         return `${(measurement / 1000).toFixed(0)} km`;
       };
 
-      const degrees_lat = toLonLat(coordinates, 'EPSG:3411')[1];
+      const degrees_lat = toLonLat(coordinates, "EPSG:3411")[1];
 
-      console.log('degrees_lat', degrees_lat);
+      console.log("degrees_lat", degrees_lat);
 
       const circumfrence_at_lat =
         2 * Math.PI * 6371000 * Math.cos(degrees_lat * (Math.PI / 180));
@@ -229,21 +229,21 @@ const MapComponent: React.FC = () => {
       line.setStyle(
         new Style({
           stroke: new Stroke({
-            color: 'black',
+            color: "black",
             width: 1,
           }),
           text: new Text({
             text: `
           ${prettifyMeasurement(arc_length_through_center * 2)} hor..
-            ${prettifyMeasurement(euclidean_distance)} vert.. Area ${(
+            ${prettifyMeasurement(euclidean_distance)} ${"\n"} Area ${(
               projectedArea / 1000000
             ).toFixed(0)} km sq. `,
-            font: '12px Calibri,sans-serif',
+            font: "12px Calibri,sans-serif",
             fill: new Fill({
-              color: 'black',
+              color: "black",
             }),
             stroke: new Stroke({
-              color: 'white',
+              color: "white",
               width: 3,
             }),
             offsetY: -10, // Adjust the label position
@@ -264,7 +264,7 @@ const MapComponent: React.FC = () => {
       circleVectorLayer.current.getSource().clear();
 
       //@ts-ignore
-      circleVectorLayer.current.getSource().addFeature(line);
+      //circleVectorLayer.current.getSource().addFeature(line);
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(circleFeature3411);
@@ -274,6 +274,29 @@ const MapComponent: React.FC = () => {
       const center_point = new Feature({
         geometry: new Point(coordinates),
       });
+
+      center_point.setStyle(
+        new Style({
+          text: new Text({
+            text: `
+          ${prettifyMeasurement(
+            arc_length_through_center * 2
+          )} X ${prettifyMeasurement(euclidean_distance)} ${"\n"} Area Ratio ${(
+              projectedArea /
+              (Math.PI * circle_radius * circle_radius)
+            ).toFixed(2)} `,
+            font: "12px Calibri,sans-serif",
+            fill: new Fill({
+              color: "black",
+            }),
+            stroke: new Stroke({
+              color: "white",
+              width: 3,
+            }),
+            offsetY: -10, // Adjust the label position
+          }),
+        })
+      );
 
       //@ts-ignore
       circleVectorLayer.current.getSource().addFeature(center_point);
@@ -296,7 +319,7 @@ const MapComponent: React.FC = () => {
         source: grid_source,
         style: new Style({
           stroke: new Stroke({
-            color: 'red',
+            color: "red",
             width: 1,
           }),
         }),
@@ -315,7 +338,7 @@ const MapComponent: React.FC = () => {
           center: fromLonLat([0, 0]),
           zoom: 2,
           //projection: 'EPSG:3411',
-          projection: 'EPSG:3411',
+          projection: "EPSG:3411",
           //extent: [-700000, -13000000, 70000000, 130000000],
           //extent: [-360, -90, 360, 90],
           //extent: [0, 0, 700000, 1300000],
@@ -328,12 +351,12 @@ const MapComponent: React.FC = () => {
 
       map.addInteraction(selectClick);
 
-      map.on('click', (event) => {
+      map.on("click", (event) => {
         const clickedCoordinate = event.coordinate;
         if (!clickedCoordinate) return;
 
         //validate coordinate
-        const inter = toLonLat(clickedCoordinate, 'EPSG:3411');
+        const inter = toLonLat(clickedCoordinate, "EPSG:3411");
 
         //return if either is NaN, null, or undefined
         if (inter[0] === null || inter[1] === null) return;
@@ -344,14 +367,14 @@ const MapComponent: React.FC = () => {
       });
 
       return () => {
-        map.setTarget('');
+        map.setTarget("");
       };
     }
   }, []);
 
   return (
     <div>
-      <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
+      <div ref={mapRef} style={{ width: "100%", height: "400px" }}></div>
       {coordinates && (
         <div>
           <p>Coordinates (EPSG:3411):</p>
@@ -359,8 +382,8 @@ const MapComponent: React.FC = () => {
           <p>Y: {coordinates[1]}</p>
           <p> Coordinates (EPSG:4326):</p>
           <p>
-            [{toLonLat(coordinates, 'EPSG:3411')[0].toFixed(6)},
-            {toLonLat(coordinates, 'EPSG:3411')[1].toFixed(6)}]
+            [{toLonLat(coordinates, "EPSG:3411")[0].toFixed(6)},
+            {toLonLat(coordinates, "EPSG:3411")[1].toFixed(6)}]
           </p>
         </div>
       )}
@@ -377,7 +400,7 @@ const MapComponent: React.FC = () => {
           }}
         />
       }
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <p>Circle Radius: {circle_radius} meters</p>
       </div>
     </div>
