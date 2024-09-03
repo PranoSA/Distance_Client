@@ -55,6 +55,10 @@ const MapComponent: React.FC = () => {
 
   const gridVectorLayer = useRef<VectorLayer<VectorSource> | null>(null);
 
+  const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
+    'slider'
+  );
+
   // Function to create latitude and longitude lines
   const createLatLonLines = () => {
     const features: Feature<LineString>[] = [];
@@ -321,13 +325,60 @@ const MapComponent: React.FC = () => {
   }, []);
 
   return (
-    <div>
+    <div className="w-full flex flex-wrap flex-row">
       <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
+      <div className="w-1/2 p-5 flex flex-wrap">
+        {/* Toggle To Set Whether slider or input */}
+        <div className="w-full flex flex-row items-center space-x-4">
+          <label className="text-gray-700">Slider</label>
+          <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+            <input
+              type="checkbox"
+              name="toggle"
+              id="toggle"
+              className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+              checked={sliderOrInput === 'input'}
+              onChange={() => {
+                setSliderOrInput(
+                  sliderOrInput === 'slider' ? 'input' : 'slider'
+                );
+              }}
+            />
+            <label
+              htmlFor="toggle"
+              className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+            ></label>
+          </div>
+          <label className="text-gray-700">Input</label>
+        </div>
+        {sliderOrInput === 'input' ? (
+          <input
+            type="number"
+            value={circle_radius}
+            onChange={(event) => {
+              set_circle_radius(parseFloat(event.target.value));
+            }}
+          />
+        ) : null}
+        {sliderOrInput === 'slider' ? (
+          /* Slider to set the circle radius */
+          <input
+            type="range"
+            min="0"
+            max="10000000"
+            value={circle_radius}
+            onChange={(event) => {
+              set_circle_radius(parseFloat(event.target.value) || 0);
+            }}
+          />
+        ) : null}
+      </div>
       {coordinates && (
-        <div>
+        <div className="w-full md:w-1/2">
           <p>Coordinates (EPSG:3035):</p>
-          <p>X: {coordinates[0]}</p>
-          <p>Y: {coordinates[1]}</p>
+          <p>
+            [{coordinates[0].toFixed(0)}, {coordinates[1].toFixed(0)}]{' '}
+          </p>
           <p> Coordinates (EPSG:4326):</p>
           <p>
             [{toLonLat(coordinates, 'EPSG:3035')[0].toFixed(6)},
@@ -335,21 +386,19 @@ const MapComponent: React.FC = () => {
           </p>
         </div>
       )}
-      {
-        /* Slider to set the circle radius */
-
-        <input
-          type="range"
-          min="0"
-          max="10000000"
-          value={circle_radius}
-          onChange={(event) => {
-            set_circle_radius(parseFloat(event.target.value));
-          }}
-        />
-      }
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <p>Circle Radius: {circle_radius} meters</p>
+      <div className="w-full flex flex-wrap flex-col">
+        <p>
+          Circle Radius:{' '}
+          {circle_radius > 1000
+            ? `${circle_radius / 1000} km`
+            : `${circle_radius} meters`}{' '}
+        </p>
+        <p>
+          Circle Diameter:{' '}
+          {circle_radius * 2 > 1000
+            ? `${(circle_radius * 2) / 1000} km`
+            : `${circle_radius} meters`}{' '}
+        </p>
       </div>
     </div>
   );
