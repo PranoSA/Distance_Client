@@ -6,8 +6,43 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Maps App',
-  description: 'Welcome to Map Apps!',
+  title: "Pranos's Map App",
+  description: 'Welcome to Map Projection Viewer!',
+  //open graph stuff
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://maps.compressibleflowcalculator.com',
+    siteName: 'Maps App',
+    title: 'Maps App',
+    description: 'Welcome to Map Apps!',
+    images: [
+      {
+        url: 'https://maps.compressibleflowcalculator.com/images/3857.png',
+        alt: 'Maps App',
+        width: 1200,
+        height: 800,
+      },
+      {
+        url: 'https://maps.compressibleflowcalculator.com/images/3411_reference.png',
+        alt: 'Maps App',
+        width: 1200,
+        height: 800,
+      },
+    ],
+    videos: [
+      {
+        url: 'https://maps.compressibleflowcalculator.com/videos/3857.mp4',
+        width: 1200,
+        height: 800,
+      },
+      {
+        url: 'https://maps.compressibleflowcalculator.com/videos/3411_reference.mp4',
+        width: 1200,
+        height: 800,
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
