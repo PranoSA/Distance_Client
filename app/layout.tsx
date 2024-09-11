@@ -30,11 +30,6 @@ export const metadata: Metadata = {
         width: 1200,
         height: 800,
       },
-      {
-        url: 'https://maps.compressibleflowcalculator.com/videos/3411_reference.mp4',
-        width: 1200,
-        height: 800,
-      },
     ],
   },
 };
