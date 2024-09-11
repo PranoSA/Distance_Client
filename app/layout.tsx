@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     url: 'https://maps.compressibleflowcalculator.com',
     siteName: 'Maps App',
     title: 'Maps App',
-    description: 'Welcome to Map Apps!',
+    description: 'Welcome to Map Projection Viewer!',
     images: [
       {
         url: 'https://maps.compressibleflowcalculator.com/images/3857.png',
