@@ -6,7 +6,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Pranos's Map App",
+  title: 'Map Projection Viewer ',
   description: 'Welcome to Map Projection Viewer!',
   //open graph stuff
   openGraph: {
@@ -19,12 +19,6 @@ export const metadata: Metadata = {
     images: [
       {
         url: 'https://maps.compressibleflowcalculator.com/images/3857.png',
-        alt: 'Maps App',
-        width: 1200,
-        height: 800,
-      },
-      {
-        url: 'https://maps.compressibleflowcalculator.com/images/3411_reference.png',
         alt: 'Maps App',
         width: 1200,
         height: 800,
