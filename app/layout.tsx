@@ -13,8 +13,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://maps.compressibleflowcalculator.com',
-    siteName: 'Maps App',
-    title: 'Maps App',
+    siteName: 'Map Projection Viewer',
+    title: 'Map Projection Viewer',
     description: 'Welcome to Map Projection Viewer!',
     images: [
       {
