@@ -7,6 +7,10 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Map Projection Viewer ',
+  twitter: {
+    card: 'summary_large_image',
+    site: '@maps',
+  },
   description: 'Welcome to Map Projection Viewer!',
   //open graph stuff
   openGraph: {

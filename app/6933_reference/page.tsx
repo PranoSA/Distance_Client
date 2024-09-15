@@ -372,7 +372,7 @@ const MapComponent: React.FC = () => {
             type="number"
             value={circle_radius}
             onChange={(event) => {
-              set_circle_radius(parseFloat(event.target.value));
+              set_circle_radius(parseFloat(event.target.value)|| 0);
             }}
           />
         ) : null}
