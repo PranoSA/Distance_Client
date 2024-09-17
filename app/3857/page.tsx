@@ -47,6 +47,8 @@ const WalkinPathPage: React.FC = () => {
     end_date: '2021-09-10',
   });
 
+  const [milesOrKm, setMilesOrKm] = useState<'miles' | 'km'>('miles');
+
   const tripRef = useRef<WalkingTrip>({
     id: 1,
     name: 'Trip 1',
@@ -1631,38 +1633,25 @@ const WalkinPathPage: React.FC = () => {
         return acc + curr;
       });
       return total_distance;
-      //return distanceTo[index];
-
-      let distance = 0;
-      for (let i = 1; i < trip.paths.length; i++) {
-        const previous = trip.paths[i - 1];
-        const current = trip.paths[i];
-
-        //distance between two points
-        const distanceBetween = Math.sqrt(
-          Math.pow(current.lat - previous.lat, 2) +
-            Math.pow(current.long - previous.long, 2)
-        );
-
-        //use openlayers to calculate the distance
-
-        distance += distanceBetween;
-
-        //need to map to espg:4326
-
-        // right now its in degrees
-        // need to convert to meters
-
-        // distance += distanceBetween;
-      }
-
-      return distance;
     }
 
     return 0;
   };
 
   const convertDistanceToPrettyString = (distance: number) => {
+    if (milesOrKm === 'miles') {
+      if (distance < 1609) {
+        return `${(Math.floor(distance) / 1609) * 5280} ft`;
+      }
+      if (distance < 1609 * 10) {
+        return (
+          `${Math.floor(distance / 1609)} miles` +
+          ` + ${Math.floor(((distance % 1609) / 1609) * 5280)} ft`
+        );
+      }
+      return `${Math.floor(distance / 1609)} miles`;
+    }
+
     if (distance < 1000) {
       return `${Math.floor(distance)} meters`;
     }
@@ -1750,36 +1739,6 @@ const WalkinPathPage: React.FC = () => {
             searchRef.current = false;
           }}
           handleAdd={(destination) => {
-            /*if (too_long) {
-              if (destination.long > 0) {
-                destination.long -= 20037508.34 * 2;
-              } else {
-                destination.long += 20037508.34 * 2;
-              }
-            }*/
-
-            /*
-            if (tripRef.current.paths.length > 0) {
-              const what_to_do = findOutWhatToDoFromPoints(
-                tripRef.current.paths[tripRef.current.paths.length - 1].lat,
-                tripRef.current.paths[tripRef.current.paths.length - 1].long,
-                destination.lat,
-                destination.long
-              );
-
-             console.log('WHAT SHOLD YOU DO !!!!', what_to_do);
-
-              if (what_to_do === 'subtract') {
-                destination.long -= 20037508.34 * 2;
-              }
-
-              if (what_to_do === 'add') {
-                destination.long += 20037508.34 * 2;
-              }
-            }
-              */
-
-            //convert lat and long to 3857
             const coordinates = fromLonLat([destination.long, destination.lat]);
 
             //add the coordinate to the trip
@@ -1816,34 +1775,44 @@ const WalkinPathPage: React.FC = () => {
       <div ref={mapRef} className="w-full h-[60vh] relative"></div>
       {modalIndexPanel()}
       <div className="flex flex-col">
-        <h1 className="text-2xl">
-          {' '}
-          Distance (Miles) :{' '}
-          {(calculateOpenLayerDistanceOfFeature() / 1609).toFixed(3)}
-        </h1>
         <h1>
-          {' '}
-          Projected Distance is{' '}
-          {convertDistanceToPrettyString(calculateDistanceOfPath())}
-        </h1>
-        <h1>
-          {' '}
-          Distnace is{' '}
+          Distance is{' '}
           {convertDistanceToPrettyString(calculateOpenLayerDistanceOfFeature())}
+          <span className="line yellow-line"></span>
         </h1>
         <h1>
-          {''}
-          Staraight Line distance is{' '}
-          {Math.round(
-            nonProjectedDistance.reduce((acc, curr) => acc + curr, 0) / 1000
-          )}{' '}
-          km
+          Distance Along Straight Red Lines{' '}
+          {convertDistanceToPrettyString(
+            Math.round(
+              nonProjectedDistance.reduce((acc, curr) => acc + curr, 0)
+            )
+          )}
+          <span className="line red-line"></span>
         </h1>
         <h1>
-          {' '}
-          Distance from start to end is{' '}
+          Direct Distance Start To End{' '}
           {convertDistanceToPrettyString(shortestPathStartToEnd())}
+          <span className="line green-line"></span>
         </h1>
+        <h1>
+          Projected Coordinate System Distance{' '}
+          {convertDistanceToPrettyString(calculateDistanceOfPath())}
+          <span className="line red-line"></span>
+        </h1>
+
+        <div className="toggle-container">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={milesOrKm === 'miles'}
+              onChange={() => {
+                setMilesOrKm(milesOrKm === 'miles' ? 'km' : 'miles');
+              }}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+          <span>{milesOrKm === 'km' ? 'Kilometers' : 'Miles'}</span>
+        </div>
       </div>
       <div className="flex flex-row w-full space-around">
         <button
