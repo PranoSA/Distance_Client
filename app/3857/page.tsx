@@ -1641,7 +1641,7 @@ const WalkinPathPage: React.FC = () => {
   const convertDistanceToPrettyString = (distance: number) => {
     if (milesOrKm === 'miles') {
       if (distance < 1609) {
-        return `${(Math.floor(distance) / 1609) * 5280} ft`;
+          return `${(Math.floor(distance/1609*5280))} ft`;
       }
       if (distance < 1609 * 10) {
         return (
