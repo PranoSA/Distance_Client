@@ -21,7 +21,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4 lg:pd-24 bg-gray-100">
+    <main className="flex min-h-screen flex-col items-center justify-between p-4 lg:pd-24 bg-gray-100 dark:bg-gray-800">
       <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex flex-col space-y-8">
         <h1 className="text-3xl font-bold mb-8">
           Web Mercator Distance Calculator
