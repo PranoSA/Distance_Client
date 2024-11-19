@@ -181,6 +181,35 @@ const MapComponent: React.FC = () => {
     return features;
   };
 
+  //when mount, set circle_radius and coordinates to query params if they exist
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const radius = url.searchParams.get('circle_radius');
+    const lat = url.searchParams.get('lat');
+    const lon = url.searchParams.get('lon');
+
+    if (radius) {
+      set_circle_radius(parseFloat(radius));
+    }
+
+    if (lat && lon) {
+      setCoordinates([parseFloat(lon), parseFloat(lat)]);
+    }
+  }, []);
+
+  //set query params when circle_radius or coordinates change
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (circle_radius !== 0) {
+      url.searchParams.set('circle_radius', circle_radius.toString());
+    }
+    if (coordinates) {
+      url.searchParams.set('lat', coordinates[1].toString());
+      url.searchParams.set('lon', coordinates[0].toString());
+    }
+    window.history.replaceState({}, '', url.toString());
+  }, [circle_radius, coordinates]);
+
   // when circle_radius, or coordinates change, update the circle
   useEffect(() => {
     if (coordinates && circleVectorLayer.current) {
