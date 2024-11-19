@@ -314,8 +314,6 @@ const MapComponent: React.FC = () => {
           handleClose={() => setShowDestinationModal(false)}
           handleOpen={() => setShowDestinationModal(true)}
           handleAdd={(destination) => {
-            console.log('Destination:', destination);
-
             //set the coordinates
             const lat = destination.lat;
             const lon = destination.long;
@@ -390,8 +388,6 @@ const MapComponent: React.FC = () => {
                   : circle_radius
               }
               onChange={(event) => {
-                console.log('new value', event.target.value);
-                console.log('er', event.target.value || 0);
                 set_circle_radius(
                   inputMeterOrKm === 'km'
                     ? (parseFloat(event.target.value) || 0) * 1000
@@ -420,7 +416,6 @@ const MapComponent: React.FC = () => {
                   checked={inputMeterOrKm === 'km'}
                   onChange={(e) => {
                     e.stopPropagation();
-                    console.log('inputMeterOrKm', inputMeterOrKm);
                     setInputMeterOrKm(inputMeterOrKm === 'm' ? 'km' : 'm');
                     set_circle_radius(
                       inputMeterOrKm === 'm'

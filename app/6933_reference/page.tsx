@@ -21,6 +21,8 @@ import { Fill, Stroke, Style, Text } from 'ol/style';
 import { Control } from 'ol/control';
 import CircleStyle from 'ol/style/Circle';
 
+import { AddDestinationModal } from '@/components/AddDestinationModa';
+
 proj4.defs(
   'EPSG:27700',
   '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 ' +
@@ -85,6 +87,11 @@ const MapComponent: React.FC = () => {
   const [sliderOrInput, setSliderOrInput] = useState<'slider' | 'input'>(
     'slider'
   );
+
+  const [inputMeterOrKm, setInputMeterOrKm] = useState<'m' | 'km'>('km');
+
+  const [showDestinationModal, setShowDestinationModal] =
+    useState<boolean>(false);
 
   // Function to create latitude and longitude lines
   const createLatLonLines = () => {
@@ -341,12 +348,41 @@ const MapComponent: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full flex flex-wrap flex-row">
-      <div ref={mapRef} style={{ width: '100%', height: '400px' }}></div>
-      <div className="w-1/2 p-5 flex flex-wrap">
+    <div className="w-full flex flex-wrap flex-row  h-[100vh]">
+      <div
+        ref={mapRef}
+        style={{ width: '100%', height: 'calc(100% - 150px)' }}
+      ></div>
+      <div className="w-full flex flex-wrap flex-row justify-center">
+        <AddDestinationModal
+          show={showDestinationModal}
+          handleClose={() => setShowDestinationModal(false)}
+          handleOpen={() => setShowDestinationModal(true)}
+          handleAdd={(destination) => {
+            //set the coordinates
+            const lat = destination.lat;
+            const lon = destination.long;
+
+            setCoordinates(fromLonLat([lon, lat]));
+
+            //close the modal
+            setShowDestinationModal(false);
+          }}
+        />
+      </div>
+
+      <div className="w-1/2 p-2 flex flex-wrap">
         {/* Toggle To Set Whether slider or input */}
         <div className="w-full flex flex-row items-center space-x-4">
-          <label className="text-gray-700">Slider</label>
+          <label
+            className={`${
+              sliderOrInput === 'slider'
+                ? 'text-gray-700 dark:text-gray-200'
+                : 'text-gray-200 dark:text-gray-700'
+            }`}
+          >
+            Slider
+          </label>
           <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
             <input
               type="checkbox"
@@ -355,9 +391,12 @@ const MapComponent: React.FC = () => {
               className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
               checked={sliderOrInput === 'input'}
               onChange={() => {
-                setSliderOrInput(
-                  sliderOrInput === 'slider' ? 'input' : 'slider'
-                );
+                {
+                  console.log('SLIDER');
+                  setSliderOrInput(
+                    sliderOrInput === 'slider' ? 'input' : 'slider'
+                  );
+                }
               }}
             />
             <label
@@ -365,28 +404,119 @@ const MapComponent: React.FC = () => {
               className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
             ></label>
           </div>
-          <label className="text-gray-700">Input</label>
+          <label
+            className={`${
+              sliderOrInput === 'input'
+                ? 'text-gray-700 dark:text-gray-200'
+                : 'text-gray-200 dark:text-gray-700'
+            }`}
+          >
+            Input
+          </label>
         </div>
         {sliderOrInput === 'input' ? (
-          <input
-            type="number"
-            value={circle_radius}
-            onChange={(event) => {
-              set_circle_radius(parseFloat(event.target.value)|| 0);
-            }}
-          />
+          <>
+            {/* Input to set the circle radius */}
+            <label className="dark:text-white pr-4">
+              Circle Radius ({inputMeterOrKm === 'm' ? 'Meters' : 'Kilometers'}
+              ):
+            </label>
+
+            <input
+              type="number"
+              className="dark:text-gray-800 bg-white "
+              step={1}
+              min={0}
+              value={
+                inputMeterOrKm === 'km'
+                  ? Math.round(circle_radius / 1000)
+                  : circle_radius
+              }
+              onChange={(event) => {
+                set_circle_radius(
+                  inputMeterOrKm === 'km'
+                    ? (parseFloat(event.target.value) || 0) * 1000
+                    : parseFloat(event.target.value) || 0
+                );
+              }}
+            />
+
+            {/* Toggle to set whether input is in meters or kilometers */}
+            <div className="w-full flex flex-row items-center space-x-4">
+              <label
+                className={`${
+                  inputMeterOrKm === 'm'
+                    ? 'text-gray-700 dark:text-gray-200'
+                    : 'text-gray-200 dark:text-gray-700'
+                }`}
+              >
+                Meters
+              </label>
+              <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                <input
+                  type="checkbox"
+                  name="toggle_m_or_km"
+                  id="toggle_m_or_km"
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                  checked={inputMeterOrKm === 'km'}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setInputMeterOrKm(inputMeterOrKm === 'm' ? 'km' : 'm');
+                    set_circle_radius(
+                      inputMeterOrKm === 'm'
+                        ? Math.round(circle_radius / 1000)
+                        : circle_radius * 1000
+                    );
+                  }}
+                />
+                <label
+                  htmlFor="toggle_m_or_km"
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <label
+                className={`${
+                  inputMeterOrKm === 'km'
+                    ? 'text-gray-700 dark:text-gray-200'
+                    : 'text-gray-200 dark:text-gray-700'
+                }`}
+              >
+                Kilometers
+              </label>
+            </div>
+          </>
         ) : null}
         {sliderOrInput === 'slider' ? (
           /* Slider to set the circle radius */
-          <input
-            type="range"
-            min="0"
-            max="10000000"
-            value={circle_radius}
-            onChange={(event) => {
-              set_circle_radius(parseFloat(event.target.value) || 0);
-            }}
-          />
+
+          <>
+            <div className="w-full flex flex-wrap">
+              <div className="flex flex-row justify-between">
+                <p>0</p>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="10000000"
+                value={circle_radius}
+                className="dark:text-gray-500 bg-white"
+                onChange={(event) => {
+                  set_circle_radius(parseFloat(event.target.value) || 0);
+                }}
+              />
+              <div className="flex flex-row justify-between">
+                <p>10,000,000</p>
+              </div>
+            </div>
+            <div className="w-full">
+              <p>
+                Circle Radius:{' '}
+                {circle_radius > 1000
+                  ? `${circle_radius / 1000} km`
+                  : `${circle_radius} meters`}{' '}
+              </p>
+            </div>
+          </>
         ) : null}
       </div>
       {coordinates && (
