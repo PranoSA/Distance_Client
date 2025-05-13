@@ -30,6 +30,16 @@ import { buffer } from 'stream/consumers';
 import { Destination } from '@/definitions/Destinations';
 import { AddDestinationModal } from '@/components/AddDestinationModa';
 
+const projectionOptions = [
+  'EPSG:4326',
+  'EPSG:3857',
+  'EPSG:3395',
+  'EPSG:900913',
+  'EPSG:27700',
+  'EPSG:32633',
+  'EPSG:32632',
+];
+
 import {
   update_url_based_on_path_string,
   retrieve_path_from_url,
@@ -47,6 +57,8 @@ const WalkinPathPage: React.FC = () => {
     end_date: '2021-09-10',
   });
 
+  const gridLayer = useRef<VectorLayer | null>(null);
+
   const [milesOrKm, setMilesOrKm] = useState<'miles' | 'km'>('miles');
 
   const tripRef = useRef<WalkingTrip>({
@@ -62,6 +74,102 @@ const WalkinPathPage: React.FC = () => {
     type: 'add' | 'remove' | 'edit' | 'clear';
     index: number; //only applicable to edit (for now) and later remove
     coordinate: Coordinate[]; //only applicable to reset
+  };
+
+  // Function to create latitude and longitude lines
+  const createLatLonLines = () => {
+    const features: Feature<LineString>[] = [];
+    const latitudes = [
+      -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60,
+      70, 80, 90,
+    ];
+    const longitudes = [
+      -180, -170, -160, -150, -140, -130, -120, -110, -100, -90, -80, -70, -60,
+      -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110,
+      120, 130, 140, 150, 160, 170, 180,
+    ];
+
+    // Create latitude lines
+    latitudes.forEach((lat) => {
+      const coords = [];
+      for (let lon = -180; lon <= 180; lon += 1) {
+        coords.push(fromLonLat([lon, lat], 'EPSG:3857'));
+      }
+      const new_feature = new Feature({
+        geometry: new LineString(coords),
+      });
+
+      //style feature according to this
+      // 0 = black
+      // -30, 30 = red
+      // -45, 45 = green
+      // -60, 60 = blue
+      // -75, 75 = yellow
+
+      const new_style = new Style({
+        stroke: new Stroke({
+          color: 'black',
+          width: 1,
+        }),
+      });
+
+      if (lat === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
+      /*if (lat === 30 || lat === -30) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
+
+      if (lat === 45 || lat === -45) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }
+
+      if (lat === 45 || lat === -45) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 1 }));
+      }*/
+
+      //add style to feature
+      new_feature.setStyle(new_style);
+
+      features.push(new_feature);
+    });
+
+    // Create longitude lines
+    longitudes.forEach((lon) => {
+      const coords = [];
+      for (let lat = -90; lat <= 90; lat += 1) {
+        coords.push(fromLonLat([lon, lat], 'EPSG:3857'));
+      }
+
+      //style feature according to this
+      // 0  = yellow
+      // -180, 180 = black
+      // -120, 120 = red
+      // -60, 60 = green
+
+      const new_style = new Style({
+        stroke: new Stroke({
+          color: 'black',
+          width: 1,
+        }),
+      });
+
+      if (lon === 0) {
+        new_style.setStroke(new Stroke({ color: 'red', width: 2 }));
+      }
+
+      const new_feature = new Feature({
+        geometry: new LineString(coords),
+      });
+
+      //add style to feature
+      new_feature.setStyle(new_style);
+
+      features.push(new_feature);
+    });
+
+    return features;
   };
 
   const editHistory = useRef<EditAction[]>([]);
@@ -501,6 +609,13 @@ const WalkinPathPage: React.FC = () => {
   };
 
   useEffect(() => {
+    //set grid layer to
+    gridLayer.current = new VectorLayer({
+      source: new VectorSource({
+        features: createLatLonLines(),
+      }),
+    });
+
     if (mapRef.current && !mapInstanceRef.current) {
       const vectorLayer = new VectorLayer({
         source: vectorSourceRef.current,
@@ -590,6 +705,7 @@ const WalkinPathPage: React.FC = () => {
 
       //add the layer to the map
       map.addLayer(mevectorLayer);
+      map.addLayer(gridLayer.current);
 
       //draw it now
 
@@ -869,6 +985,17 @@ const WalkinPathPage: React.FC = () => {
         });
 
         const lineFeature = new Feature(lineString);
+
+        //create rhumb line
+        const rhumbDistance = turf.rhumbDistance(
+          turf.point(prev_4326),
+          turf.point(current_4326)
+        );
+        const rhumbBearing = turf.rhumbBearing(
+          turf.point(prev_4326),
+          turf.point(current_4326)
+        );
+        // Use rhumbDistance and rhumbBearing as needed
 
         let crosses_meridian = circle_arc_3857.length === 2;
 
@@ -1641,7 +1768,7 @@ const WalkinPathPage: React.FC = () => {
   const convertDistanceToPrettyString = (distance: number) => {
     if (milesOrKm === 'miles') {
       if (distance < 1609) {
-          return `${(Math.floor(distance/1609*5280))} ft`;
+        return `${Math.floor((distance / 1609) * 5280)} ft`;
       }
       if (distance < 1609 * 10) {
         return (
